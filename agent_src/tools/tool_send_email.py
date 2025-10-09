@@ -6,6 +6,7 @@ AWS_REGION = "us-east-1"
 AWS_ACCESS_KEY = "AKIAYS2NRPZA23IURJ67"
 AWS_SECRET_KEY = "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"
 SENDER = "robert@datakafe.com"
+RECIPIENT = "robert@datakafe.com"
 BG, INK, RED, BLUE, DIV = "#f5f7fb", "#222", "#e24a4a", "#1e63c6", "#e6edf6"
 
 @tool("send_email", return_direct=True)
@@ -41,7 +42,7 @@ def send_email(recipient: str, subject: str, message: str) -> str:
 
         resp = ses.send_email(
             Source=SENDER,
-            Destination={"ToAddresses": [recipient]},
+            Destination={"ToAddresses": [RECIPIENT]},
             Message={
                 "Subject": {"Data": subject},
                 "Body": {
@@ -50,6 +51,6 @@ def send_email(recipient: str, subject: str, message: str) -> str:
                 },
             },
         )
-        return f"✅ Email sent to {recipient} (MessageId={resp['MessageId']})"
+        return f"✅ Email sent to {RECIPIENT} (MessageId={resp['MessageId']})"
     except Exception as e:
         return f"❌ Error sending email: {type(e).__name__}: {e}"

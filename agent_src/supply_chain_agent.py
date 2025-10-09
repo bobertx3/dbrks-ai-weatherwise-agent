@@ -29,8 +29,8 @@ from mlflow.types.agent import (
 # WORKSHOP_SCHEMA = os.environ["WORKSHOP_SCHEMA"]
 # USER_SCHEMA = os.environ["USER_SCHEMA"]
 WORKSHOP_CATALOG = "agentbricks"
-WORKSHOP_SCHEMA = "supply_chain_agent"
-USER_SCHEMA = "supply_chain_agent"
+WORKSHOP_SCHEMA = "med_tech_supply_chain_agent"
+USER_SCHEMA = "med_tech_supply_chain_agent"
 
 
 mlflow.langchain.autolog()
@@ -44,7 +44,34 @@ set_uc_function_client(client)
 LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 llm = ChatDatabricks(endpoint=LLM_ENDPOINT_NAME)
 
-system_prompt = "Use tools to retrieve all information needed and respond in a polite manner. Do not return only the tool call response."
+# system_prompt = "Use tools to retrieve all information needed and respond in a polite manner. Do not return only the tool call response."
+
+system_prompt = """
+You are a MedTech Supply Chain Escalation Agent.
+
+Your goal is to ensure that temperature-sensitive medical products are delivered safely and on time.
+Use the available tools to retrieve data, assess risks, and recommend or initiate escalation steps.
+
+Follow this reasoning process:
+1. Retrieve current shipments and temperature logs from Unity Catalog tables.
+2. Use the weather tool to check current or forecasted conditions at shipment destinations.
+3. Compare the current weather temperature to each shipment’s max allowable temperature using the temp_gap() function.
+4. If the gap exceeds a 5 degree difference, the shipment is at risk.
+5. Look up supplier with get_supplier_details, and escalation SOPs using vector search or embedded product documentation.
+6. If escalation is required, summarize the issue, the escalation steps, and send an email using the email tool
+
+Guidelines:
+- Always explain *why* a shipment is or isn’t at risk.
+- Combine structured data (tables) with unstructured context (SOP text) in your reasoning.
+- Be concise, factual, and action-oriented.
+- Never return only a raw tool output — provide a short, professional summary first.
+- Do not fabricate data; if uncertain, state that explicitly.
+
+Example tone:
+“Shipment SHP-20417 from Zimmer Biotech is at risk due to ambient temperatures exceeding safe range by 12°F. 
+Escalation to Tier-2 supplier contact is recommended per SOP section 4.2.”
+
+"""
 
 ###############################################################################
 ## Define tools for your agent, enabling it to retrieve data or take actions
@@ -54,21 +81,30 @@ system_prompt = "Use tools to retrieve all information needed and respond in a p
 ###############################################################################
 tools = []
 
-
-# You can use UDFs in Unity Catalog as agent tools
-if os.environ.get("IS_WORKSHOP_SETUP") == "TRUE":
-    # Default workshop setup
-    uc_tool_names = [f"{WORKSHOP_CATALOG}.{WORKSHOP_SCHEMA}.*"]
-else:
-    uc_tool_names = [f"{WORKSHOP_CATALOG}.{USER_SCHEMA}.*"]
-uc_toolkit = UCFunctionToolkit(function_names=uc_tool_names)
+uc_toolkit = UCFunctionToolkit(function_names=[
+    "agentbricks.med_tech_supply_chain_agent.*"
+])
 tools.extend(uc_toolkit.tools)
 
-
-# Add custom tools
+# Add your custom Python tools
 from tools.tool_send_email import send_email
 from tools.tool_check_weather import check_weather
 tools.extend([send_email, check_weather])
+
+# # You can use UDFs in Unity Catalog as agent tools
+# if os.environ.get("IS_WORKSHOP_SETUP") == "TRUE":
+#     # Default workshop setup
+#     uc_tool_names = [f"{WORKSHOP_CATALOG}.{WORKSHOP_SCHEMA}.*"]
+# else:
+#     uc_tool_names = [f"{WORKSHOP_CATALOG}.{USER_SCHEMA}.*"]
+# uc_toolkit = UCFunctionToolkit(function_names=uc_tool_names)
+# tools.extend(uc_toolkit.tools)
+
+
+# # Add custom tools
+# from tools.tool_send_email import send_email
+# from tools.tool_check_weather import check_weather
+# tools.extend([send_email, check_weather])
 
 
 # # Use Databricks vector search index as tool
@@ -78,9 +114,9 @@ tools.extend([send_email, check_weather])
 # Add in a tool to retrieve from our Vector Search Index
 # num_results is an important input as it dictates how many results are returned
 retriever_tool = VectorSearchRetrieverTool(
-  index_name=f"{WORKSHOP_CATALOG}.{WORKSHOP_SCHEMA}.product_docs_index",
-  tool_name="search_product_docs",
-  tool_description="Use this tool to search for product documentation.",
+  index_name=f"{WORKSHOP_CATALOG}.{WORKSHOP_SCHEMA}.supplier_sops_vs_index",
+  tool_name="search_supplier_sops",
+  tool_description="Use this tool to search for supplier SOPs and escalations.",
   num_results=3,
   disable_notice=True
 )
