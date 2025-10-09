@@ -105,22 +105,24 @@ Proactively detect and resolve **shipment disruptions** caused by weather events
 ## 🗂️ Repository Structure
 
 ```
-/src
- ├── tools/
- │    ├── tool_uc_functions.ipython    # Query structured data
- │    ├── tool_uc_vector_index.ipython # Create vector index
- │    ├── tool_check_weather.py        # Weather API integration
- │    ├── tool_send_email.py           # Send email alerts
- │    ├── __init__.py                  # Python file to ensure tools can be imported as packages 
- ├── supply_chain_agent.py             # LangGraph + MLflow logic
- ├── data/
- |    ├── shipments.csv                   
- |    ├── suppliers.csv                
- |    ├── inventory.csv                   
- |    ├── medtech_supplier_sops.csv        
- ├── setup.ipython                     # loads /data into Delta Tables and creates Vector Endpoint   
- ├── config.py                         # demo config such as catalog, schema 
- └── README.md
+/agent_src
+├── tools/
+│   ├── uc_tools/
+│   │   ├── tool_uc_functions.ipynb      # Query structured data
+│   │   ├── tool_uc_vector_index.ipynb   # Create vector index
+│   ├── custom_tools/
+│   │   ├── tool_check_weather.py        # Weather API integration
+│   │   ├── tool_send_email.py           # Send email alerts
+│   ├── __init__.py                      # Makes tools importable as a package
+├── supply_chain_agent.py                # LangGraph + MLflow logic
+├── data/
+│   ├── shipments.csv
+│   ├── suppliers.csv
+│   ├── inventory.csv
+│   ├── medtech_supplier_sops.csv
+├── setup.ipynb                          # Loads /data into Delta & creates Vector Search index
+├── config.py                            # Demo config (catalog, schema, endpoints)
+└── README.md
 ```
 
 ---
