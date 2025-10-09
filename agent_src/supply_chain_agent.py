@@ -39,11 +39,14 @@ client = DatabricksFunctionClient(disable_notice=True)
 set_uc_function_client(client)
 
 ############################################
-# Define your LLM endpoint and system prompt
+# Define your LLM endpoint
 ############################################
 LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 llm = ChatDatabricks(endpoint=LLM_ENDPOINT_NAME)
 
+############################################
+# Define your system prompt
+############################################
 system_prompt = """
 You are a MedTech Supply Chain Escalation Agent.
 
@@ -74,8 +77,6 @@ Escalation to Tier-2 supplier contact is recommended per SOP section 4.2.”
 
 ###############################################################################
 ## Define tools for your agent, enabling it to retrieve data or take actions
-## beyond text generation
-## To create and see usage examples of more tools, see
 ## https://docs.databricks.com/generative-ai/agent-framework/agent-tool.html
 ###############################################################################
 tools = []
@@ -86,8 +87,8 @@ uc_toolkit = UCFunctionToolkit(function_names=[
 tools.extend(uc_toolkit.tools)
 
 # Add your custom Python tools
-from tools.custom_tools.tool_send_email import send_email
-from tools.custom_tools.tool_check_weather import check_weather
+from custom_tools.tool_send_email import send_email
+from custom_tools.tool_check_weather import check_weather
 tools.extend([send_email, check_weather])
 
 # # You can use UDFs in Unity Catalog as agent tools
