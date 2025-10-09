@@ -56,7 +56,7 @@ Follow this reasoning process:
 1. Retrieve current shipments and temperature logs from Unity Catalog tables.
 2. Use the weather tool to check current or forecasted conditions at shipment destinations.
 3. Compare the current weather temperature to each shipment’s max allowable temperature using the temp_gap() function.
-4. If the gap exceeds a 5 degree difference, the shipment is at risk.
+4. If the temp gap is greater than a 20 degree difference (> 5), the shipment is at risk.
 5. Look up supplier with get_supplier_details, and escalation SOPs using vector search or embedded product documentation.
 6. If escalation is required, summarize the issue, the escalation steps, and send an email using the email tool
 
