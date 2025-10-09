@@ -44,8 +44,6 @@ set_uc_function_client(client)
 LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 llm = ChatDatabricks(endpoint=LLM_ENDPOINT_NAME)
 
-# system_prompt = "Use tools to retrieve all information needed and respond in a polite manner. Do not return only the tool call response."
-
 system_prompt = """
 You are a MedTech Supply Chain Escalation Agent.
 
@@ -66,6 +64,7 @@ Guidelines:
 - Be concise, factual, and action-oriented.
 - Never return only a raw tool output — provide a short, professional summary first.
 - Do not fabricate data; if uncertain, state that explicitly.
+- If you can't find knowledge in your vector search, don't return generic information, just state nothing found.
 
 Example tone:
 “Shipment SHP-20417 from Zimmer Biotech is at risk due to ambient temperatures exceeding safe range by 12°F. 
@@ -87,8 +86,8 @@ uc_toolkit = UCFunctionToolkit(function_names=[
 tools.extend(uc_toolkit.tools)
 
 # Add your custom Python tools
-from tools.tool_send_email import send_email
-from tools.tool_check_weather import check_weather
+from tools.custom_tools.tool_send_email import send_email
+from tools.custom_tools.tool_check_weather import check_weather
 tools.extend([send_email, check_weather])
 
 # # You can use UDFs in Unity Catalog as agent tools
