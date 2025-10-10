@@ -25,6 +25,10 @@ Proactively detect and resolve **shipment disruptions** caused by weather events
 | **Supplier Policies** | “If a Zimmer Biotech shipment is delayed due to weather, what’s the escalation procedure?” |
 
 ---
+## 🧠 Solution Architecture
+
+![Solution Architecture](img/arch.png)
+---
 
 ## 🧠 Agent Workflow
 
