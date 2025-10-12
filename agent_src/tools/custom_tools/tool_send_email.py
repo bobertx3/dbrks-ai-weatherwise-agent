@@ -1,12 +1,15 @@
 # send_email.py
 import boto3, re
 from langchain_core.tools import tool
+import os
 
-AWS_REGION = "us-east-1"
-AWS_ACCESS_KEY = "AKIAYS2NRPZA23IURJ67"
-AWS_SECRET_KEY = "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"
-SENDER = "robert@datakafe.com"
-RECIPIENT = "robert@datakafe.com"
+# Get environment variables
+AWS_REGION = os.environ.get("AWS_REGION")
+AWS_ACCESS_KEY = os.environ.get("AWS_ACCESS_KEY")
+AWS_SECRET_KEY = os.environ.get("AWS_SECRET_KEY")
+SENDER = os.environ.get("SENDER")
+RECIPIENT = os.environ.get("RECIPIENT")
+
 BG, INK, RED, BLUE, DIV = "#f5f7fb", "#222", "#e24a4a", "#1e63c6", "#e6edf6"
 
 @tool("send_email", return_direct=True)
