@@ -14,6 +14,7 @@ TARGET_CATALOG = "agentbricks"
 TARGET_SCHEMA = "medtech_sc"
 
 ## Additional configs
+LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 MLFLOW_EXPERIMENT = "weatherwise_agent_experiments"
 VS_INDEX_BASE_TABLE = "supplier_sops"
 VS_INDEX = "supplier_sops_vs_index"

@@ -8,6 +8,7 @@ TARGET_CATALOG = os.environ.get("TARGET_CATALOG")
 TARGET_SCHEMA = os.environ.get("TARGET_SCHEMA")
 VS_INDEX = os.environ.get("VS_INDEX")
 RETRIEVER_TOOL_NAME = os.environ.get("RETRIEVER_TOOL_NAME")
+LLM_ENDPOINT_NAME = os.environ.get("LLM_ENDPOINT_NAME")
 
 import mlflow
 from databricks_langchain import (
@@ -49,7 +50,6 @@ set_uc_function_client(client)
 ############################################
 # Define your LLM endpoint
 ############################################
-LLM_ENDPOINT_NAME = "databricks-claude-3-7-sonnet"
 llm = ChatDatabricks(endpoint=LLM_ENDPOINT_NAME)
 
 ############################################
