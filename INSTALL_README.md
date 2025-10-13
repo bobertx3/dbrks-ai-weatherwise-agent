@@ -67,11 +67,11 @@ Run **`data/setup_data.ipynb`** to:
 
 ### 4️⃣ Build, Test, and Deploy the Agent
 
-> **Tip:**  
-> Review the system prompt and `LLM_ENDPOINT` in `agent_src/supply_chain_agent.py` and modify them as needed.
+First, review the system prompt in `agent_src/supply_chain_agent.py` and modify as needed. 
 
-Open **`agent_src/agent_eval.ipynb`** and run all cells sequentially.  
-This notebook handles evaluation, testing, registration, and deployment.
+Next, open **`agent_src/agent_eval.ipynb`** and run all cells sequentially.  
+This notebook handles evaluation, testing, registration, and deployment for the agent code.
+
 
 | Step | Description |
 |------|--------------|
