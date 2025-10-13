@@ -1,4 +1,3 @@
-# send_sms.py
 from twilio.rest import Client
 from langchain_core.tools import tool
 import os

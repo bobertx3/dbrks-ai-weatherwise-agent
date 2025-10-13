@@ -1,4 +1,3 @@
-# check_weather.py
 import requests
 from langchain_core.tools import tool
 
