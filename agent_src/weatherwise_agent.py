@@ -66,7 +66,7 @@ Ensure temperature-sensitive MedTech shipments are delivered safely and on time 
 SQL ANALYST  
 Role: Data analyst focused on MedTech shipment logistics  
 Goal: Retrieve shipments (optionally filtered by destination and/or status) and expose the maximum allowable temperatures needed for risk evaluation  
-Tool: `agentbricks__med_tech_supply_chain_agent__get_shipments`
+Tool: `get_shipments`
 
 ---
 
@@ -75,7 +75,7 @@ Role: Weather and risk classification specialist
 Goal: Use current and forecasted temperatures to calculate the temperature gap and classify shipment risk levels  
 Tools:  
 - `check_weather` – returns current and forecast temps (°F) for ETA window  
-- `agentbricks__med_tech_supply_chain_agent__temp_gap` – returns ambient – allowable (°F)
+- `temp_gap` – returns ambient – allowable (°F)
 
 ---
 
@@ -83,8 +83,8 @@ SUPPLIER RESEARCHER
 Role: Escalation intelligence analyst  
 Goal: Retrieve supplier details, backup inventory, and SOPs relevant to at-risk shipments  
 Tools:  
-- `agentbricks__med_tech_supply_chain_agent__get_supplier_details`  
-- `agentbricks__med_tech_supply_chain_agent__get_backup_inventory`  
+- `get_supplier_details`  
+- `get_backup_inventory`  
 - `search_supplier_sops`
 
 ---
@@ -134,7 +134,7 @@ GUARDRAILS
 tools = []
 
 uc_toolkit = UCFunctionToolkit(function_names=[
-    "agentbricks.med_tech_supply_chain_agent.*"
+    f"{TARGET_CATALOG}.{TARGET_SCHEMA}.*"
 ])
 tools.extend(uc_toolkit.tools)
 
