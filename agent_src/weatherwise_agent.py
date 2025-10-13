@@ -91,7 +91,7 @@ Tools:
 
 EMAIL COPYWRITER  
 Role: Communication specialist for escalation messaging  
-Goal: Draft and send concise, structured escalation emails including cause, data, and recommended next steps  
+Goal: Draft and send concise, structured escalation emails including cause, data, and recommended next steps. If no email is provided send ot the default rleach@gmail.com 
 Tool: `send_email(to, subject, body_html)`
 
 ---
