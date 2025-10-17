@@ -9,6 +9,15 @@ Detect and resolve **shipment disruptions** before they impact **patients, compl
 
 ---
 
+### 🎯 Scenario
+
+Business Process
+![](img/manual_flow.png)
+
+Agent Flow
+![](img/agent_flow.png)
+---
+
 ### 💬 Example Queries
 
 | Category | Example |
@@ -22,40 +31,57 @@ Detect and resolve **shipment disruptions** before they impact **patients, compl
 
 ### 💡 Business Value
 
-#### 🌍 Operational Impact
-- Cuts response time from **hours → seconds**  
-- Unifies **shipments, weather, and supplier data**  
-- Automates **escalations and compliance actions**
+#### ⚡ Speed
+- **Hours → seconds** for risk detection  
+- Automated **weather + shipment correlation**  
+- One-click **escalation and notification**
 
-#### 💰 Efficiency
-- Prevents **spoilage and stockouts**  
-- Avoids **SLA penalties** via early alerts  
-- Improves **team efficiency** with AI-assisted workflows  
+#### 💰 Savings
+- Avoids **spoilage, delays, and SLA fines**  
+- Reduces **manual triage workload**  
+- Maximizes **on-time, in-spec delivery**
 
-#### 🛡️ Risk & Compliance
-- Enforces **SOP-aligned escalation steps**  
-- Ensures **audit-ready traceability**  
-- Protects **patient safety** with proactive interventions  
-
----
-
-### 🧱 Solution Architecture Snapshot
-
-![Solution Architecture](img/arch.png)
+#### 🛡️ Compliance
+- Follows **supplier SOPs automatically**  
+- Provides **audit-ready traceability**  
+- Strengthens **patient safety assurance**
 
 ---
 
-### 🧠 How It Works — The Escalation Crew
+### 🧠 Escalation Crew — Agents and Tools
 
-A coordinated **Crew of Specialized Agents** collaborates to assess risk and trigger the right actions:
+#### 🌦 METEOROLOGIST  
+**Role:** Weather and risk analyst  
+**Goal:** Analyze forecast data and compute temperature gaps between ambient and shipment thresholds  
+**Tools:** `check_weather`, `temp_gap`
 
-- **Meteorologist** — Analyzes forecasts and computes temperature gaps.  
-- **SQL Analyst** — Retrieves shipment and temperature data from Unity Catalog.  
-- **Supplier Researcher** — Finds backup inventory, contacts, and SOPs.  
-- **Email Copywriter** — Sends detailed escalation reports via email.  
-- **Texter** — Sends concise SMS summaries for rapid awareness.  
+---
 
-Each agent contributes insights, ensuring every escalation is **data-driven, SOP-aligned, and actionable**.
+#### 📊 SQL ANALYST  
+**Role:** Data analyst focused on MedTech shipment logistics  
+**Goal:** Retrieve shipments (optionally filtered by destination and/or status) and expose the maximum allowable temperatures needed for risk evaluation  
+**Tools:** `get_shipments`, `get_backup_inventory`
+
+---
+
+#### 📁 SUPPLIER RESEARCHER  
+**Role:** Knowledge analyst specializing in supplier compliance and escalation workflows  
+**Goal:** Identify supplier-specific SOPs, escalation contacts, and nearby backup inventory  
+**Tools:** `get_supplier_details`, `search_supplier_sops`
+
+---
+
+#### 📝 EMAIL COPYWRITER  
+**Role:** Communications agent for detailed escalation summaries  
+**Goal:** Compose and send email reports summarizing affected shipments and next steps  
+**Tools:** `send_email` (via any email service API)
+
+---
+
+#### 📱 TEXTER  
+**Role:** Rapid notifier for short alerts  
+**Goal:** Send SMS notifications to field or operations teams for immediate awareness  
+**Tools:** `send_sms` (via any SMS service)
 
 ---
 
@@ -74,8 +100,8 @@ Each agent contributes insights, ensuring every escalation is **data-driven, SOP
 | Tool | Description |
 |------|--------------|
 | `check_weather` | Get live or forecasted weather for destination routes |
-| `send_email` | Send escalation summaries via AWS SES |
-| `send_sms` | Send short alerts via Twilio SMS |
+| `send_email` | Send escalation summaries via **Mailgun** (or any email service API) |
+| `send_sms` | Send short alerts via **Twilio SMS** |
 
 ---
 
