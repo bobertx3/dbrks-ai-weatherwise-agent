@@ -1,24 +1,49 @@
-# send_email.py
-import boto3, re
+import os, re, requests
 from langchain_core.tools import tool
+from typing import Optional
 
-AWS_REGION = "us-east-1"
-AWS_ACCESS_KEY = "AKIAYS2NRPZA23IURJ67"
-AWS_SECRET_KEY = "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"
-SENDER = "robert@datakafe.com"
-RECIPIENT = "robert@datakafe.com"
+# ── Env vars ──────────────────────────────────────────────
+MAILGUN_API_URL = os.environ.get("MAILGUN_API_URL")       # full endpoint
+MAILGUN_API_KEY = os.environ.get("MAILGUN_API_KEY")       # e.g. key-xxxxxx
+SENDER          = os.environ.get("SENDER")
+RECIPIENT_ENV   = os.environ.get("RECIPIENT")
+AGENT_NAME   = os.environ.get("AGENT_NAME")
+
+# ── Styles ────────────────────────────────────────────────
 BG, INK, RED, BLUE, DIV = "#f5f7fb", "#222", "#e24a4a", "#1e63c6", "#e6edf6"
 
+def _as_list(value: Optional[str]):
+    """Split comma/semicolon-separated recipients into a clean list."""
+    if not value:
+        return []
+    return [v.strip() for v in re.split(r"[;,]", value) if v.strip()]
+
 @tool("send_email", return_direct=True)
-def send_email(recipient: str, subject: str, message: str) -> str:
+def send_email(recipient: Optional[str] = None, subject: str = "", message: str = "") -> str:
     """
-    Sends a styled HTML email using AWS SES.
+    Sends a styled HTML email via Mailgun.
     Arguments:
-      recipient: Target email address (must be verified in SES sandbox)
-      subject: Email subject line
-      message: Email body text (HTML allowed)
+      recipient: (optional) email address(es), comma/semicolon separated.
+                 If not provided, falls back to RECIPIENT env var.
+      subject:   subject line
+      message:   message body (HTML allowed)
     """
     try:
+        # --- validate config
+        missing = [k for k, v in {
+            "MAILGUN_API_URL": MAILGUN_API_URL,
+            "MAILGUN_API_KEY": MAILGUN_API_KEY,
+            "SENDER": SENDER,
+        }.items() if not v]
+        if missing:
+            return f"❌ Missing required env vars: {', '.join(missing)}"
+
+        # --- choose recipient(s)
+        to_list = _as_list(recipient) or _as_list(RECIPIENT_ENV)
+        if not to_list:
+            return "❌ No recipient provided (argument or RECIPIENT env)."
+
+        # --- plain text + html
         text = re.sub(r"<[^>]+>", "", message.replace("<br/>", "\n").replace("<br>", "\n"))
         html = f"""
         <html><body style='margin:0;padding:0;background:{BG};'>
@@ -30,27 +55,30 @@ def send_email(recipient: str, subject: str, message: str) -> str:
         <hr style='border:none;border-top:1px solid {DIV};margin:10px 0 18px 0;'>
         <div>{message}</div>
         <hr style='border:none;border-top:1px solid {DIV};margin:24px 0 12px 0;'>
-        <p style='font-size:12px;color:#667;text-align:center;'>© Jackson &amp; Jackson • Sent via AWS SES •
+        <p style='font-size:12px;color:#667;text-align:center;'>© Jackson &amp; Jackson •
         <a href='mailto:{SENDER}' style='color:{BLUE};text-decoration:none;'>{SENDER}</a></p>
-        </td></tr></table></td></tr></table></body></html>"""
+        </td></tr></table></td></tr></table></body></html>""".strip()
 
-        ses = boto3.client("ses",
-            region_name=AWS_REGION,
-            aws_access_key_id=AWS_ACCESS_KEY,
-            aws_secret_access_key=AWS_SECRET_KEY
-        )
+        # --- send
+        data = {
+            "from": f"{AGENT_NAME}<{SENDER}>",
+            "to": to_list,
+            "subject": subject,
+            "text": text,
+            "html": html,
+            "h:Reply-To": SENDER,
+        }
 
-        resp = ses.send_email(
-            Source=SENDER,
-            Destination={"ToAddresses": [RECIPIENT]},
-            Message={
-                "Subject": {"Data": subject},
-                "Body": {
-                    "Html": {"Data": html},
-                    "Text": {"Data": text},
-                },
-            },
-        )
-        return f"✅ Email sent to {RECIPIENT} (MessageId={resp['MessageId']})"
+        resp = requests.post(MAILGUN_API_URL, auth=("api", MAILGUN_API_KEY), data=data, timeout=20)
+
+        if resp.ok:
+            try:
+                msg_id = resp.json().get("id", "unknown")
+            except Exception:
+                msg_id = "unknown"
+            return f"✅ Email sent to {', '.join(to_list)} (id={msg_id})"
+        else:
+            return f"❌ Email error {resp.status_code}: {resp.text[:400]}"
+
     except Exception as e:
         return f"❌ Error sending email: {type(e).__name__}: {e}"

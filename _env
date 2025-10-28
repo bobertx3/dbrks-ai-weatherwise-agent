@@ -1,0 +1,22 @@
+## To send emails, using AWS SES (simple email service)
+AWS_REGION = " "
+AWS_ACCESS_KEY = " "
+AWS_SECRET_KEY = " "
+SENDER = " "
+RECIPIENT = " "
+
+## To send sms, using Twilio  
+SMS_ACCOUNT_SID = " "
+SMS_AUTH_TOKEN  = " "
+
+## Catalog and Schema
+TARGET_CATALOG = "agentbricks"
+TARGET_SCHEMA = "medtech_sc"
+
+## Additional configs
+LLM_ENDPOINT_NAME = "databricks-meta-llama-3-3-70b-instruct"
+MLFLOW_EXPERIMENT = "weatherwise_agent_experiments"
+VS_INDEX_BASE_TABLE = "supplier_sops"
+VS_INDEX = "supplier_sops_vs_index"
+RETRIEVER_TOOL_NAME = "search_supplier_sops"
+AGENT_NAME = "weatherwise_agent"

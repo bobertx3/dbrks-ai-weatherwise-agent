@@ -1,195 +1,119 @@
-# 🌦 MedTech Supply Chain Agent — Weather-Aware Escalation Agent
+## 🌦 MedTech - WeatherWise Supply Chain Escalation Agent
 
-The **Weather-Aware Supply Chain Agent** answers operational supply-chain questions using real data, predictive reasoning, and automated actions.  
-It brings together structured logistics data, live weather feeds, and supplier escalation procedures to help MedTech operations teams act before issues occur.
-
----
-
-## 📘 Overview
-The **Weather-Aware Supply Chain Agent** monitors and mitigates weather-related risks across the MedTech logistics network.  
-It ensures **temperature-sensitive and time-critical medical products** are delivered safely and on time by analyzing structured and unstructured data, checking for extreme weather, and automating supplier escalation workflows.
+The **WeatherWise Supply Chain Escalation Agent** helps MedTech operations teams **anticipate and mitigate weather-related shipment risks** using live data, predictive reasoning, and automated escalation workflows.
 
 ---
 
-## 🎯 Goal
-Proactively detect and resolve **shipment disruptions** caused by weather events — including heatwaves, blizzards, storms, or floods — before they impact patient care or regulatory compliance.
+### 🎯 Mission
+Detect and resolve **shipment disruptions** before they impact **patients, compliance, or cost**.
 
 ---
 
-## 💬 Example Questions Users Can Ask
+### 🎯 Scenario
 
-| Category | Example Prompt |
-|-----------|----------------|
-| **Weather Risk & Escalation** | “Temperatures in New York City are expected to hit 105°F — which shipments are at risk and who should I escalate to?” |
-| **Delivery Status** | “Show me what medical implant shipments were delivered this week and any that were delayed.” |
-| **Supplier Policies** | “If a Zimmer Biotech shipment is delayed due to weather, what’s the escalation procedure?” |
+Business Process
+![](img/manual_flow.png)
 
----
-## 🧠 Solution Architecture
-
-![Solution Architecture](img/arch.png)
+Agent Flow
+![](img/agent_flow.png)
 ---
 
-## 🧠 Agent Workflow
+### 💬 Example Queries
 
-1. **Shipment Check** — Retrieve carrier, ETA, and temperature logs from Unity Catalog.  
-2. **Weather Check** — Detect regional threats such as heatwaves, snowstorms, or heavy rain along the route or destination.  
-3. **Inventory Check** — Locate alternate stock or suppliers near affected delivery zones.  
-4. **SOP Retrieval (RAG)** — Search supplier escalation policies or PDF SOPs to determine next steps.  
-5. **Summarize & Act** — Generate a concise risk report and, if needed, send an **email alert** to logistics and supplier contacts.
+| Category | Example |
+|-----------|----------|
+| **Full Automation** | “The weather in New York will be hot tomorrow. Which in-transit shipments are at risk, what escalation steps should I take, and is there a backup supplier nearby? Email me a report and send an SMS summary.” |
+| **Weather Risks** | “Which shipments are at risk due to high temperatures in NYC?” |
+| **Delivery Status** | “Show in-transit implant shipments for this week.” |
+| **Supplier SOPs** | “What’s Zimmer’s escalation process for temperature exceptions?” |
 
 ---
 
-## ⚙️ Tools
+### 💡 Business Value
 
+#### ⚡ Speed
+- **Hours → seconds** for risk detection  
+- Automated **weather + shipment correlation**  
+- One-click **escalation and notification**
+
+#### 💰 Savings
+- Avoids **spoilage, delays, and SLA fines**  
+- Reduces **manual triage workload**  
+- Maximizes **on-time, in-spec delivery**
+
+#### 🛡️ Compliance
+- Follows **supplier SOPs automatically**  
+- Provides **audit-ready traceability**  
+- Strengthens **patient safety assurance**
+
+---
+
+### 🧠 Escalation Crew — Agents and Tools
+
+#### 🌦 METEOROLOGIST  
+**Role:** Weather and risk analyst  
+**Goal:** Analyze forecast data and compute temperature gaps between ambient and shipment thresholds  
+**Tools:** `check_weather`, `temp_gap`
+
+---
+
+#### 📊 SQL ANALYST  
+**Role:** Data analyst focused on MedTech shipment logistics  
+**Goal:** Retrieve shipments (optionally filtered by destination and/or status) and expose the maximum allowable temperatures needed for risk evaluation  
+**Tools:** `get_shipments`, `get_backup_inventory`
+
+---
+
+#### 📁 SUPPLIER RESEARCHER  
+**Role:** Knowledge analyst specializing in supplier compliance and escalation workflows  
+**Goal:** Identify supplier-specific SOPs, escalation contacts, and nearby backup inventory  
+**Tools:** `get_supplier_details`, `search_supplier_sops`
+
+---
+
+#### 📝 EMAIL COPYWRITER  
+**Role:** Communications agent for detailed escalation summaries  
+**Goal:** Compose and send email reports summarizing affected shipments and next steps  
+**Tools:** `send_email` (via any email service API)
+
+---
+
+#### 📱 TEXTER  
+**Role:** Rapid notifier for short alerts  
+**Goal:** Send SMS notifications to field or operations teams for immediate awareness  
+**Tools:** `send_sms` (via any SMS service)
+
+---
+
+### ⚙️ Tools Overview
+
+#### 🔹 Unity Catalog Tools
 | Tool | Description |
 |------|--------------|
-| `get_shipment` | Retrieve shipment and temperature details from UC tables. |
-| `check_weather` | Detect extreme weather and forecast disruptions. |
-| `get_inventory_near` | Find alternate stock or supplier sites near the impacted region. |
-| `vector_search_tool('supplier_policies_index')` | Retrieve escalation SOPs and SLAs from embedded text or PDFs. |
-| `send_email` | Send formatted alerts or escalation summaries automatically. |
+| `get_shipments` | Retrieve shipment, carrier, and temperature data |
+| `get_backup_inventory` | Identify alternate or nearby stock locations |
+| `get_supplier_details` | Retrieve supplier info and escalation contacts |
+| `temp_gap` | Calculate ambient vs. threshold temperature differences |
+| `search_supplier_sops` | Retrieve escalation SOPs from the **`supplier_sops_vs_index`** vector search index |
+
+#### 🔹 Custom Tools
+| Tool | Description |
+|------|--------------|
+| `check_weather` | Get live or forecasted weather for destination routes |
+| `send_email` | Send escalation summaries via **Mailgun** (or any email service API) |
+| `send_sms` | Send short alerts via **Twilio SMS** |
 
 ---
 
-## 💡 Business Value
+### 🧩 Demo Data Sources
 
-### 🌍 Operational Impact
-- **Reduces weather-related disruption response time** from hours to seconds.  
-- Provides unified visibility across **shipments, weather forecasts, and supplier status**.  
-- Automates **escalation and compliance workflows** under adverse conditions.
-
-### 💰 Cost & Efficiency
-- **Prevents spoilage and stockouts** for high-value implants or biologics.  
-- **Avoids SLA penalties** by triggering proactive mitigation.  
-- Boosts **team productivity** through agent-guided decision support.
-
-### 🛡️ Risk & Compliance
-- Maintains **traceability** and **audit readiness** for regulated logistics.  
-- Enforces **validated SOPs** and supplier escalation policies.  
-- Enhances **patient safety** by ensuring timely delivery and product integrity.
+| File | Description |
+|------|--------------|
+| `demo_shipments.csv` | Shipment details, ETA, carrier, and temperature logs |
+| `demo_suppliers.csv` | Supplier contacts and escalation references |
+| `demo_inventory.csv` | Warehouse and backup inventory data |
+| `demo_supplier_sops.csv` | Supplier SOPs and escalation documents (for RAG) |
 
 ---
 
-## 🧩 Example Data Sources
-
-| File | Purpose |
-|------|----------|
-| `shipments.csv` | Shipment records, routes, ETA, carrier, and temperature logs. |
-| `suppliers.csv` | Supplier contacts and escalation policy references. |
-| `inventory.csv` | Warehouse and alternate stock data for substitution. |
-| `medtech_sops.csv` | Product and escalation documents used for RAG or vector search. |
-
----
-
-## 🚀 Example Demo Flow
-
-1. **Setup Data**  
-   Load all CSVs into Delta tables and register Unity Catalog functions:
-   - `get_shipment`
-   - `get_inventory_near`
-   - `get_supplier`
-   - `medtech_sops.csv`
-
-2. **Build Agent**  
-   - Create UC tools + custom tools (`check_weather`, `send_email`).  
-   - Create vector search index to search SOPs.  
-   - Configure the system prompt with weather-risk reasoning.
-
-3. **Test Agent**
-   - `agent.predict()` → sanity check agent is using all the tools created. 
-
-4. **Evaluate, Register, Deploy**
-   - `mlflow.genai` and `agent.eval()` → create sample or synethic data and evaluate using LLM judges
-   - `mlflow.register_model()` → add to Model Registry.  
-   - `agents.deploy()` → enable live inference and human-review app for feedback from business SMEs.
-
----
-
-## 🗂️ Repository Structure
-
-```
-/agent_src
-├── tools/
-│   ├── uc_tools/
-│   │   ├── tool_uc_functions.ipynb      # Query structured data
-│   │   ├── tool_uc_vector_index.ipynb   # Create vector index
-│   ├── custom_tools/
-│   │   ├── tool_check_weather.py        # Weather API integration
-│   │   ├── tool_send_email.py           # Send email alerts
-│   ├── __init__.py                      # Makes tools importable as a package
-├── supply_chain_agent.py                # LangGraph + MLflow logic
-├── data/
-│   ├── shipments.csv
-│   ├── suppliers.csv
-│   ├── inventory.csv
-│   ├── medtech_supplier_sops.csv
-├── setup.ipynb                          # Loads /data into Delta & creates Vector Search index
-├── config.py                            # Demo config (catalog, schema, endpoints)
-└── README.md
-```
-
----
-
-# 📧 AWS SES Setup (for Databricks Agent Email Tool)
-
-## 1. Verify Your Email Identity
-- Go to [AWS SES Console](https://us-east-1.console.aws.amazon.com/ses/home?region=us-east-1#/verified-identities).  
-- Click **“Create Identity” → “Email address”** and enter your sender (e.g. `robert@datakafe.com`).  
-- Confirm via the verification email.  
-> 🔹 In sandbox mode, verify **both sender and recipient** emails.  
-> To move to production: [Request Production Access](https://docs.aws.amazon.com/ses/latest/dg/request-production-access.html)
-
----
-
-## 2. Create IAM Credentials
-- In [IAM Console](https://console.aws.amazon.com/iamv2/home#/users), create a user (e.g. `databricks-ses-agent`).  
-- Attach the policy:  
-  ```
-  AmazonSESFullAccess
-  ```
-- Download your:
-  - `AWS_ACCESS_KEY_ID`
-  - `AWS_SECRET_ACCESS_KEY`
-
----
-
-## 3. Configure in Databricks
-Store credentials securely using **Databricks Secrets**:
-```python
-AWS_REGION = "us-east-1"
-AWS_ACCESS_KEY = dbutils.secrets.get("aws", "ses_access_key")
-AWS_SECRET_KEY = dbutils.secrets.get("aws", "ses_secret_key")
-```
-> Docs: [Databricks Secrets](https://docs.databricks.com/en/security/secrets/secrets.html)
-
----
-
-## 4. Send a Test Email
-```python
-import boto3
-ses = boto3.client("ses",
-    region_name=AWS_REGION,
-    aws_access_key_id=AWS_ACCESS_KEY,
-    aws_secret_access_key=AWS_SECRET_KEY)
-
-resp = ses.send_email(
-    Source="robert@datakafe.com",
-    Destination={"ToAddresses": ["robert@datakafe.com"]},
-    Message={
-        "Subject": {"Data": "SES Test Email"},
-        "Body": {"Text": {"Data": "This is a test email sent via AWS SES!"}},
-    })
-print("✅ Sent:", resp["MessageId"])
-```
-
----
-
-## 5. References
-- 📘 [AWS SES Developer Guide](https://docs.aws.amazon.com/ses/latest/dg/Welcome.html)  
-- 🔐 [Managing Access to SES](https://docs.aws.amazon.com/ses/latest/dg/control-user-access.html)  
-- 🧰 [boto3 SES Docs](https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/ses.html)
-
----
-© 2025 — *Authored by Robert “Bobby” Leach*
-
+© 2025 — *Authored by Bobby Leach*
