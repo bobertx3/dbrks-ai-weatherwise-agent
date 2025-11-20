@@ -1,4 +1,4 @@
-## To send emails, using Mailgun (3000 free emails per month)
+## To send emails using Mailgun (3000 free emails per month)
 MAILGUN_API_URL=""
 MAILGUN_API_KEY=""
 SENDER=""
