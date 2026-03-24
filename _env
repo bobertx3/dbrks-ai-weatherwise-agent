@@ -19,4 +19,5 @@ VS_INDEX_BASE_TABLE="supplier_sops"
 VS_INDEX="supplier_sops_vs_index"
 RETRIEVER_TOOL_NAME="search_supplier_sops"
 AGENT_NAME="weatherwise_agent"
+APP_NAME="weatherwise_chat_agent"
 
