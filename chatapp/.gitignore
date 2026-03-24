@@ -1,0 +1,23 @@
+# dependencies
+node_modules
+
+# build output
+client/dist
+server/dist
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+
+# local env files
+.env
+.env.local
+.env*.local
+
+tsconfig.tsbuildinfo
+
+# Databricks bundle state
+.databricks

@@ -1,4 +1,4 @@
-## To send emails, using Mailgun (3000 free emails per month)
+## To send emails using Mailgun (3000 free emails per month)
 MAILGUN_API_URL=""
 MAILGUN_API_KEY=""
 SENDER=""
@@ -19,4 +19,5 @@ VS_INDEX_BASE_TABLE="supplier_sops"
 VS_INDEX="supplier_sops_vs_index"
 RETRIEVER_TOOL_NAME="search_supplier_sops"
 AGENT_NAME="weatherwise_agent"
+APP_NAME="weatherwise_chat_agent"
 
