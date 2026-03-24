@@ -1,1 +1,10 @@
 .env
+
+# Chat app
+chatapp/node_modules/
+chatapp/client/dist/
+chatapp/server/dist/
+chatapp/.env
+
+# Databricks bundle
+.databricks/
