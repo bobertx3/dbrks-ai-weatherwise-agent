@@ -591,6 +591,58 @@ except Exception as e:
   fi
 }
 
+# ── Set app thumbnail ─────────────────────────────────────────
+set_app_thumbnail() {
+  local app_name="${APP_NAME:-weatherwise-chat-agent}"
+  local image="$SCRIPT_DIR/img/10_app_dashboard.png"
+
+  if [[ ! -f "$image" ]]; then
+    echo "  Skipping thumbnail — image not found: $image"
+    return
+  fi
+
+  echo ""
+  echo "Setting app thumbnail for $app_name..."
+
+  # Resize to 640x360 (max 250KB) if needed
+  local upload_image="$image"
+  if python3 -c "
+from PIL import Image
+img = Image.open('$image')
+exit(0 if img.size != (640, 360) or __import__('os').path.getsize('$image') > 250*1024 else 1)
+" 2>/dev/null; then
+    upload_image="/tmp/app_thumbnail_resized.png"
+    python3 -c "
+from PIL import Image
+Image.open('$image').resize((640, 360), Image.LANCZOS).save('$upload_image', optimize=True)
+"
+    echo "  Resized to 640x360"
+  fi
+
+  local token host encoded
+  host=$(python3 -c "
+import configparser, os
+cfg = configparser.ConfigParser()
+cfg.read(os.path.expanduser('~/.databrickscfg'))
+print(cfg.get('DEFAULT', 'host', fallback='').rstrip('/'))
+")
+  token=$(databricks auth token --host "$host" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+  encoded=$(base64 -i "$upload_image")
+
+  local result error
+  result=$(curl -s -X POST "$host/api/2.0/apps/$app_name/thumbnail" \
+    -H "Authorization: Bearer $token" \
+    -H "Content-Type: application/json" \
+    -d "{\"encoded_thumbnail\": \"$encoded\"}")
+
+  error=$(echo "$result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('error_code',''))" 2>/dev/null || echo "")
+  if [[ -n "$error" ]]; then
+    echo "  WARNING: Failed to set thumbnail — $error"
+  else
+    echo "  Thumbnail set successfully."
+  fi
+}
+
 # ── Main ─────────────────────────────────────────────────────
 main() {
   echo "============================================================"
@@ -672,6 +724,9 @@ main() {
   echo "  SQL Warehouse: ${DATABRICKS_SQL_WAREHOUSE_ID:-not configured}"
   echo "  Genie Space:  ${DATABRICKS_GENIE_SPACE_ID:-not created}"
   echo ""
+  # Set app thumbnail
+  set_app_thumbnail
+
   echo "Next steps:"
   echo "  Deploy the chat app:"
   echo "    databricks bundle deploy --target dev"
