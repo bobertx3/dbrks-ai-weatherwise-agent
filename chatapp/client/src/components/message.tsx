@@ -38,6 +38,7 @@ import { MessageOAuthError } from './message-oauth-error';
 import { isCredentialErrorMessage } from '@/lib/oauth-error-utils';
 import { Streamdown } from 'streamdown';
 import { useApproval } from '@/hooks/use-approval';
+import { renderToolOutput } from '@/components/tool-renderers';
 
 const PurePreviewMessage = ({
   message,
@@ -312,8 +313,13 @@ const PurePreviewMessage = ({
               }
 
               // Render regular tool calls
+              const richOutput =
+                state === 'output-available' && !errorText
+                  ? renderToolOutput(toolName, output)
+                  : null;
+
               return (
-                <Tool key={toolCallId} defaultOpen={false}>
+                <Tool key={toolCallId} defaultOpen={richOutput != null}>
                   <ToolHeader type={toolName} state={effectiveState} />
                   <ToolContent>
                     <ToolInput input={input} />
@@ -324,6 +330,8 @@ const PurePreviewMessage = ({
                             <div className="rounded border p-2 text-red-500">
                               Error: {errorText}
                             </div>
+                          ) : richOutput != null ? (
+                            richOutput
                           ) : (
                             <div className="whitespace-pre-wrap font-mono text-sm">
                               {typeof output === 'string'

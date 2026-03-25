@@ -2,10 +2,11 @@ import type { DataUIPart, LanguageModelUsage, UIMessageChunk } from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSWRConfig } from 'swr';
-import { ChatHeader } from '@/components/chat-header';
 import { fetchWithErrorHandlers, generateUUID } from '@/lib/utils';
 import { MultimodalInput } from './multimodal-input';
 import { Messages } from './messages';
+import { Button } from './ui/button';
+import { PlusIcon } from 'lucide-react';
 import type {
   Attachment,
   ChatMessage,
@@ -16,7 +17,7 @@ import type {
 import { unstable_serialize } from 'swr/infinite';
 import { getChatHistoryPaginationKey } from './sidebar-history';
 import { toast } from './toast';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { ChatSDKError } from '@chat-template/core/errors';
 import { useDataStream } from './data-stream-provider';
@@ -267,13 +268,14 @@ export function Chat({
   }, [query, sendMessage, hasAppendedQuery, id, chatHistoryEnabled]);
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
+  const navigate = useNavigate();
 
   return (
     <>
-      <div className="overscroll-behavior-contain flex h-dvh min-w-0 touch-pan-y flex-col bg-background">
-        <ChatHeader />
+      <div className="overscroll-behavior-contain flex h-full min-w-0 touch-pan-y flex-col bg-background">
 
         <Messages
+          chatId={id}
           status={status}
           messages={messages}
           setMessages={setMessages}
@@ -285,7 +287,7 @@ export function Chat({
           feedback={feedback}
         />
 
-        <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
+        <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl items-end gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">
           {!isReadonly && (
             <MultimodalInput
               chatId={id}
@@ -300,6 +302,17 @@ export function Chat({
               sendMessage={sendMessage}
               selectedVisibilityType={visibilityType}
             />
+          )}
+          {messages.length > 0 && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="mb-0.5 h-10 w-10 shrink-0 rounded-xl"
+              onClick={() => navigate('/')}
+              title="New Chat"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </div>

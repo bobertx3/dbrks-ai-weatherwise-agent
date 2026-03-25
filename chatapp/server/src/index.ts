@@ -17,6 +17,8 @@ import { sessionRouter } from './routes/session';
 import { messagesRouter } from './routes/messages';
 import { configRouter } from './routes/config';
 import { feedbackRouter } from './routes/feedback';
+import { dashboardRouter } from './routes/dashboard';
+import { genieRouter } from './routes/genie';
 import { ChatSDKError } from '@chat-template/core/errors';
 
 // ESM-compatible __dirname
@@ -56,6 +58,8 @@ app.use('/api/session', sessionRouter);
 app.use('/api/messages', messagesRouter);
 app.use('/api/config', configRouter);
 app.use('/api/feedback', feedbackRouter);
+app.use('/api/dashboard', dashboardRouter);
+app.use('/api/genie', genieRouter);
 
 // Agent backend proxy (optional)
 // If API_PROXY is set, proxy /invocations requests to the agent backend

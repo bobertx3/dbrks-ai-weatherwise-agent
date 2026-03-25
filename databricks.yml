@@ -8,6 +8,9 @@ variables:
   serving_endpoint_name:
     description: "Name of the model serving endpoint for the weatherwise agent"
     default: "agents_bx4-agentbricks_weatherwise-weatherwise"
+  sql_warehouse_id:
+    description: "SQL warehouse ID for the dashboard and Genie features"
+    default: "0d3bda4f46281ab5"
   resource_name_suffix:
     description: "Suffix for resource names to avoid collisions"
 
@@ -23,6 +26,11 @@ resources:
           serving_endpoint:
             name: ${var.serving_endpoint_name}
             permission: CAN_QUERY
+        - name: sql-warehouse
+          description: "SQL warehouse for dashboard queries and Genie"
+          sql_warehouse:
+            id: ${var.sql_warehouse_id}
+            permission: CAN_USE
         # Optional: Uncomment for persistent chat history (requires Lakebase)
         # - name: database
         #   description: "Lakebase database for chat history"

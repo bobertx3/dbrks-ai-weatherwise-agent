@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { useSession } from '@/contexts/SessionContext';
+import { ChatHeader } from '@/components/chat-header';
 
 export default function ChatLayout() {
   const { session, loading } = useSession();
@@ -25,5 +26,12 @@ export default function ChatLayout() {
     );
   }
 
-  return <Outlet />;
+  return (
+    <div className="flex h-dvh flex-col">
+      <ChatHeader />
+      <div className="flex-1 overflow-hidden">
+        <Outlet />
+      </div>
+    </div>
+  );
 }

@@ -16,8 +16,10 @@ interface SuggestedActionsProps {
 function PureSuggestedActions({ chatId, sendMessage }: SuggestedActionsProps) {
   const { chatHistoryEnabled } = useAppConfig();
   const suggestedActions = [
-    'How can you help me?',
-    'Tell me something I might not know',
+    'Check weather in New York — any shipments at risk?',
+    'What backup inventory do we have for delayed shipments?',
+    'Show me Tier-1 supplier escalation procedures',
+    'Draft an alert email about cold-chain risks to Dallas',
   ];
 
   return (

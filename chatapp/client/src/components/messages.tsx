@@ -8,8 +8,10 @@ import type { ChatMessage, FeedbackMap } from '@chat-template/core';
 import { useDataStream } from './data-stream-provider';
 import { Conversation, ConversationContent } from './elements/conversation';
 import { ArrowDownIcon } from 'lucide-react';
+import { FollowUpActions } from './follow-up-actions';
 
 interface MessagesProps {
+  chatId: string;
   status: UseChatHelpers<ChatMessage>['status'];
   messages: ChatMessage[];
   setMessages: UseChatHelpers<ChatMessage>['setMessages'];
@@ -22,6 +24,7 @@ interface MessagesProps {
 }
 
 function PureMessages({
+  chatId,
   status,
   messages,
   setMessages,
@@ -93,6 +96,21 @@ function PureMessages({
             messages[messages.length - 1].role === 'user' &&
             selectedModelId !== 'chat-model-reasoning' && (
               <AwaitingResponseMessage />
+            )}
+
+          {status === 'ready' &&
+            messages.length > 0 &&
+            messages[messages.length - 1].role === 'assistant' && (
+              <FollowUpActions
+                chatId={chatId}
+                sendMessage={sendMessage}
+                lastAssistantMessage={
+                  messages[messages.length - 1].parts
+                    ?.filter((p: any) => p.type === 'text')
+                    .map((p: any) => p.text)
+                    .join(' ') ?? ''
+                }
+              />
             )}
 
           <div

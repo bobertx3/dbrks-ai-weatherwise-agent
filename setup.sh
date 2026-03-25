@@ -387,6 +387,210 @@ print_manual_instructions() {
   echo "============================================================"
 }
 
+# ── Find or create SQL warehouse for Dashboard & Genie ──────
+setup_sql_warehouse() {
+  echo ""
+  echo "Setting up SQL warehouse..."
+
+  if [[ -n "${DATABRICKS_SQL_WAREHOUSE_ID:-}" ]]; then
+    echo "  Using configured warehouse: $DATABRICKS_SQL_WAREHOUSE_ID"
+  else
+    # Find an existing warehouse (prefer serverless)
+    DATABRICKS_SQL_WAREHOUSE_ID=$(databricks warehouses list --output json 2>/dev/null | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+warehouses = data if isinstance(data, list) else data.get('warehouses', [])
+for w in warehouses:
+    wtype = w.get('warehouse_type', '')
+    if wtype == 'PRO' and w.get('enable_serverless_compute', False):
+        print(w['id'])
+        break
+else:
+    for w in warehouses:
+        print(w['id'])
+        break
+" 2>/dev/null || echo "")
+
+    if [[ -z "$DATABRICKS_SQL_WAREHOUSE_ID" ]]; then
+      echo "  No warehouse found. Creating a serverless warehouse..."
+      DATABRICKS_SQL_WAREHOUSE_ID=$(databricks warehouses create --json "{
+        \"name\": \"weatherwise-dashboard\",
+        \"cluster_size\": \"2X-Small\",
+        \"warehouse_type\": \"PRO\",
+        \"enable_serverless_compute\": true,
+        \"auto_stop_mins\": 10,
+        \"max_num_clusters\": 1
+      }" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || echo "")
+
+      if [[ -z "$DATABRICKS_SQL_WAREHOUSE_ID" ]]; then
+        echo "  WARNING: Could not create SQL warehouse. Dashboard and Genie will not work."
+        echo "  Set DATABRICKS_SQL_WAREHOUSE_ID in .env manually."
+        return
+      fi
+      echo "  Created warehouse: weatherwise-dashboard ($DATABRICKS_SQL_WAREHOUSE_ID)"
+    else
+      local wname
+      wname=$(databricks warehouses get "$DATABRICKS_SQL_WAREHOUSE_ID" 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('name',''))" 2>/dev/null || echo "")
+      echo "  Found warehouse: $wname ($DATABRICKS_SQL_WAREHOUSE_ID)"
+    fi
+  fi
+
+  # Persist to .env if not already there
+  local env_file="$SCRIPT_DIR/.env"
+  [[ ! -f "$env_file" ]] && env_file="$SCRIPT_DIR/_env"
+  if grep -q "^DATABRICKS_SQL_WAREHOUSE_ID=" "$env_file" 2>/dev/null; then
+    # Update existing value
+    if [[ "$(uname)" == "Darwin" ]]; then
+      sed -i '' "s/^DATABRICKS_SQL_WAREHOUSE_ID=.*/DATABRICKS_SQL_WAREHOUSE_ID=$DATABRICKS_SQL_WAREHOUSE_ID/" "$env_file"
+    else
+      sed -i "s/^DATABRICKS_SQL_WAREHOUSE_ID=.*/DATABRICKS_SQL_WAREHOUSE_ID=$DATABRICKS_SQL_WAREHOUSE_ID/" "$env_file"
+    fi
+  else
+    echo "" >> "$env_file"
+    echo "# SQL Warehouse for Dashboard and Genie" >> "$env_file"
+    echo "DATABRICKS_SQL_WAREHOUSE_ID=$DATABRICKS_SQL_WAREHOUSE_ID" >> "$env_file"
+    echo "  (Appended DATABRICKS_SQL_WAREHOUSE_ID to $env_file)"
+  fi
+
+  # Grant permissions to app service principal (if app exists)
+  local app_sp_id
+  app_sp_id=$(databricks apps get weatherwise-chat-agent --output json 2>/dev/null | python3 -c "
+import sys, json
+app = json.load(sys.stdin)
+sp = app.get('service_principal', {})
+print(sp.get('id', sp.get('application_id', '')))
+" 2>/dev/null || echo "")
+
+  if [[ -n "$app_sp_id" ]]; then
+    echo "  Granting CAN_USE on warehouse to app service principal..."
+    databricks api patch "/api/2.0/permissions/warehouses/$DATABRICKS_SQL_WAREHOUSE_ID" --json "{
+      \"access_control_list\": [
+        {
+          \"service_principal_name\": \"$app_sp_id\",
+          \"all_permissions\": [
+            { \"permission_level\": \"CAN_USE\" }
+          ]
+        }
+      ]
+    }" 2>/dev/null && echo "    Warehouse permission granted." || echo "    NOTE: Warehouse permission will be granted via bundle deploy."
+
+    # Grant Unity Catalog permissions using SP client ID
+    local app_sp_client_id
+    app_sp_client_id=$(databricks apps get weatherwise-chat-agent --output json 2>/dev/null | python3 -c "
+import sys, json
+print(json.load(sys.stdin).get('service_principal_client_id', ''))
+" 2>/dev/null || echo "")
+
+    if [[ -n "$app_sp_client_id" ]]; then
+      echo "  Granting Unity Catalog permissions to SP ($app_sp_client_id)..."
+      for grant in \
+        "GRANT USE CATALOG ON CATALOG $TARGET_CATALOG TO \`$app_sp_client_id\`" \
+        "GRANT USE SCHEMA ON SCHEMA $TARGET_CATALOG.$TARGET_SCHEMA TO \`$app_sp_client_id\`" \
+        "GRANT SELECT ON SCHEMA $TARGET_CATALOG.$TARGET_SCHEMA TO \`$app_sp_client_id\`"; do
+        databricks api post /api/2.0/sql/statements --json "{
+          \"warehouse_id\": \"$DATABRICKS_SQL_WAREHOUSE_ID\",
+          \"statement\": \"$grant\",
+          \"wait_timeout\": \"30s\"
+        }" 2>/dev/null | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+state = d.get('status',{}).get('state','')
+if state == 'SUCCEEDED':
+    print('    OK: $grant'.split(' TO ')[0] + '...granted')
+else:
+    err = d.get('status',{}).get('error',{}).get('message','unknown')
+    print(f'    WARN: {err}')
+" 2>/dev/null
+      done
+    fi
+  else
+    echo "  App not yet deployed — permissions will be set on next run after deploy."
+  fi
+}
+
+# ── Create Genie Space ──────────────────────────────────────
+create_genie_space() {
+  if [[ -z "${DATABRICKS_SQL_WAREHOUSE_ID:-}" ]]; then
+    echo ""
+    echo "  Skipping Genie Space creation (no SQL warehouse available)."
+    return
+  fi
+
+  if [[ -n "${DATABRICKS_GENIE_SPACE_ID:-}" ]]; then
+    echo ""
+    echo "  Genie Space already configured: $DATABRICKS_GENIE_SPACE_ID"
+    return
+  fi
+
+  echo ""
+  echo "Creating Genie Space for $TARGET_CATALOG.$TARGET_SCHEMA..."
+
+  local space_id
+  # Use Python to construct the payload (tables must be sorted by identifier)
+  space_id=$(python3 -c "
+import json, urllib.request, ssl, subprocess
+
+token_data = json.loads(subprocess.run(['databricks', 'auth', 'token'], capture_output=True, text=True).stdout)
+token = token_data['access_token']
+
+host_result = subprocess.run(['databricks', 'auth', 'describe', '--output', 'json'], capture_output=True, text=True)
+# Fall back to env
+import os
+host = os.environ.get('DATABRICKS_HOST', '').rstrip('/')
+if not host:
+    import configparser
+    cfg = configparser.ConfigParser()
+    cfg.read(os.path.expanduser('~/.databrickscfg'))
+    host = cfg.get('DEFAULT', 'host', fallback='').rstrip('/')
+
+cat = '$TARGET_CATALOG'
+schema = '$TARGET_SCHEMA'
+wh = '$DATABRICKS_SQL_WAREHOUSE_ID'
+
+tables = sorted([
+    {'identifier': f'{cat}.{schema}.inventory'},
+    {'identifier': f'{cat}.{schema}.shipments'},
+    {'identifier': f'{cat}.{schema}.supplier_sops'},
+    {'identifier': f'{cat}.{schema}.suppliers'},
+], key=lambda t: t['identifier'])
+
+serialized = json.dumps({'version': 2, 'data_sources': {'tables': tables}})
+payload = json.dumps({
+    'title': 'WeatherWise Supply Chain Explorer',
+    'description': 'Ask natural language questions about shipments, inventory, suppliers, and SOPs for Jackson & Jackson MedTech.',
+    'warehouse_id': wh,
+    'serialized_space': serialized
+}).encode()
+
+req = urllib.request.Request(f'{host}/api/2.0/genie/spaces', data=payload,
+    headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}, method='POST')
+try:
+    resp = urllib.request.urlopen(req, context=ssl.create_default_context())
+    result = json.loads(resp.read())
+    print(result.get('space_id', ''))
+except Exception as e:
+    import sys; print('', file=sys.stderr); print(str(e), file=sys.stderr)
+" 2>/dev/null)
+
+  if [[ -z "$space_id" ]]; then
+    echo "  WARNING: Failed to create Genie Space."
+    echo "  You can create one manually or run: ./genie/setup_genie_space.sh"
+    return
+  fi
+
+  echo "  Genie Space created: $space_id"
+
+  # Append to .env if not already there
+  local env_file="$SCRIPT_DIR/.env"
+  [[ ! -f "$env_file" ]] && env_file="$SCRIPT_DIR/_env"
+  if ! grep -q "DATABRICKS_GENIE_SPACE_ID" "$env_file" 2>/dev/null; then
+    echo "" >> "$env_file"
+    echo "# Genie Space for Ask Genie tab" >> "$env_file"
+    echo "DATABRICKS_GENIE_SPACE_ID=$space_id" >> "$env_file"
+    echo "  (Appended DATABRICKS_GENIE_SPACE_ID to $env_file)"
+  fi
+}
+
 # ── Main ─────────────────────────────────────────────────────
 main() {
   echo "============================================================"
@@ -431,6 +635,12 @@ main() {
   # Create vector search index via API
   create_vector_search_index
 
+  # Set up SQL warehouse (find/create, persist, grant permissions)
+  setup_sql_warehouse
+
+  # Create Genie Space for Ask Genie tab
+  create_genie_space
+
   # Run agent eval notebook (logs, registers, and deploys the agent)
   local agent_params="{
     \"TARGET_CATALOG\": \"$TARGET_CATALOG\",
@@ -453,12 +663,14 @@ main() {
   echo "  Setup Complete!"
   echo "============================================================"
   echo ""
-  echo "  Catalog:   $TARGET_CATALOG"
-  echo "  Schema:    $TARGET_SCHEMA"
-  echo "  Tables:    shipments, suppliers, inventory, $VS_INDEX_BASE_TABLE"
-  echo "  Functions: get_shipments, get_supplier_details, get_backup_inventory, temp_gap"
-  echo "  VS Index:  $TARGET_CATALOG.$TARGET_SCHEMA.$VS_INDEX"
-  echo "  Agent:     $TARGET_CATALOG.$TARGET_SCHEMA.${AGENT_NAME:-weatherwise_agent}"
+  echo "  Catalog:      $TARGET_CATALOG"
+  echo "  Schema:       $TARGET_SCHEMA"
+  echo "  Tables:       shipments, suppliers, inventory, $VS_INDEX_BASE_TABLE"
+  echo "  Functions:    get_shipments, get_supplier_details, get_backup_inventory, temp_gap"
+  echo "  VS Index:     $TARGET_CATALOG.$TARGET_SCHEMA.$VS_INDEX"
+  echo "  Agent:        $TARGET_CATALOG.$TARGET_SCHEMA.${AGENT_NAME:-weatherwise_agent}"
+  echo "  SQL Warehouse: ${DATABRICKS_SQL_WAREHOUSE_ID:-not configured}"
+  echo "  Genie Space:  ${DATABRICKS_GENIE_SPACE_ID:-not created}"
   echo ""
   echo "Next steps:"
   echo "  Deploy the chat app:"

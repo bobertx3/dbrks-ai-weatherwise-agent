@@ -22,7 +22,7 @@ export const Greeting = () => {
         transition={{ delay: 0.6 }}
         className="text-xl text-zinc-500 md:text-2xl"
       >
-        I can proactively resolve order shipment issues.
+        I monitor weather, track shipments, and manage supplier escalations for Jackson & Jackson MedTech.
       </motion.div>
     </div>
   );

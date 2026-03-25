@@ -8,6 +8,8 @@ import RootLayout from '@/layouts/RootLayout';
 import ChatLayout from '@/layouts/ChatLayout';
 import NewChatPage from '@/pages/NewChatPage';
 import ChatPage from '@/pages/ChatPage';
+import DashboardPage from '@/pages/DashboardPage';
+import GeniePage from '@/pages/GeniePage';
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
                 <Route element={<ChatLayout />}>
                   <Route index element={<NewChatPage />} />
                   <Route path="chat/:id" element={<ChatPage />} />
+                  <Route path="dashboard" element={<DashboardPage />} />
+                  <Route path="genie" element={<GeniePage />} />
                 </Route>
               </Route>
             </Routes>
