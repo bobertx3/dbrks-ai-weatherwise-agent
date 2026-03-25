@@ -16,6 +16,33 @@ Business Process
 
 Agent Flow
 ![](img/agent_flow.png)
+
+---
+
+### 📸 Screenshots
+
+#### Chat App
+![Chat Landing](img/06_app_chat_landing.png)
+![Agent Tool Calls & Risk Assessment](img/07_app_chat_tool_calls.png)
+![Email & SMS Escalation](img/08_app_chat_email_sms.png)
+
+#### Agent Flow Diagram
+![Multi-Agent Pipeline](img/09_app_agent_flow_diagram.png)
+
+#### Dashboard & Genie
+![Supply Chain Dashboard](img/10_app_dashboard.png)
+![Ask Genie](img/11_app_ask_genie.png)
+
+#### Platform
+![Unity Catalog Schema](img/02_unity_catalog_schema_tables.png)
+![UC Volume Data](img/03_unity_catalog_volume_data.png)
+![UC Functions](img/05_unity_catalog_functions.png)
+![Registered Model Versions](img/04_unity_catalog_model_versions.png)
+![Model Serving Endpoint](img/12_serving_endpoint.png)
+
+#### Evaluation
+![MLflow Eval Traces](img/01_mlflow_eval_traces.png)
+
 ---
 
 ### 💬 Example Queries
