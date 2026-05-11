@@ -21,3 +21,4 @@ tsconfig.tsbuildinfo
 
 # Databricks bundle state
 .databricks
+package-lock.json
