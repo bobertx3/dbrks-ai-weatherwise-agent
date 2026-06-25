@@ -15,14 +15,14 @@
    "source": [
     "# Databricks Mosaic AI Core APIs \n",
     "\n",
-    "## MLflow \u2013 Model & Agent Lifecycle\n",
+    "## MLflow – Model & Agent Lifecycle\n",
     "- **mlflow.pyfunc.log_model**: Packages an agent or model as a deployable MLflow artifact.\n",
     "- **mlflow.register_model**: Registers a model or agent into Unity Catalog for governance and deployment.\n",
     "- **mlflow.pyfunc.load_model**: Loads a registered model for batch inference or Python execution.\n",
     "- **mlflow.set_experiment**: Sets the experiment location for runs, traces, and evaluations.\n",
     "- **@mlflow.trace**: Automatically captures agent steps, tool calls, and LLM interactions.\n",
     "\n",
-    "## MLflow GenAI \u2013 Evaluation\n",
+    "## MLflow GenAI – Evaluation\n",
     "- **mlflow.genai.evaluate**: Runs offline evaluation of agents or RAG pipelines using LLM judges.\n",
     "- **mlflow.genai.datasets.create_dataset**: Creates a reusable dataset for agent evaluation.\n",
     "- **mlflow.genai.datasets.get_dataset**: Loads an evaluation dataset for scoring and regression testing.\n",
@@ -30,13 +30,13 @@
     "- **mlflow.genai.scorers.RelevanceToQuery**: Scores how relevant a response is to the input query.\n",
     "- **mlflow.genai.scorers.Guidelines**: Scores compliance with custom safety or policy rules.\n",
     "\n",
-    "## Databricks Agent Framework \u2013 Deployment\n",
+    "## Databricks Agent Framework – Deployment\n",
     "- **agents.deploy**: Deploys a Unity-Catalog-registered agent to Mosaic AI Model Serving.\n",
     "- **agents.list_deployments**: Lists all active agent deployments.\n",
     "- **agents.get_deployment**: Retrieves metadata and status for a deployed agent.\n",
     "- **agents.delete_deployment**: Removes an agent deployment and serving endpoint.\n",
     "\n",
-    "## Unity Catalog \u2013 Governed Tools\n",
+    "## Unity Catalog – Governed Tools\n",
     "- **DatabricksFunctionClient**: Client for registering and invoking Unity Catalog function tools.\n",
     "- **create_python_function**: Registers a Python function as a governed agent tool.\n",
     "- **create_function**: Registers a SQL function as a governed agent tool.\n",
@@ -65,7 +65,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 0,
    "metadata": {
     "application/vnd.databricks.v1+cell": {
      "cellMetadata": {
@@ -80,7 +80,10 @@
     }
    },
    "outputs": [],
-   "source": "%pip install -U -qqqq \"mlflow-skinny[databricks]>=3.1\" \"databricks-langchain>=0.19.0\" databricks-agents twilio python-dotenv\ndbutils.library.restartPython()"
+   "source": [
+    "%pip install -U -qqqq mlflow-skinny[databricks] langgraph==0.3.4 databricks-langchain databricks-agents twilio python-dotenv\n",
+    "dbutils.library.restartPython()"
+   ]
   },
   {
    "cell_type": "code",
@@ -107,7 +110,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 0,
    "metadata": {
     "application/vnd.databricks.v1+cell": {
      "cellMetadata": {
@@ -122,7 +125,10 @@
     }
    },
    "outputs": [],
-   "source": "import os\nimport sys\nsys.path.append(\"./tools\")\n\n# Populate os.environ from job/notebook widgets BEFORE importing weatherwise_agent\n# (the agent reads os.environ at import time). Interactive runs without widgets fall\n# back to the .env file loaded in the next cell. Widget values take precedence.\n_CONFIG_KEYS = [\n    \"TARGET_CATALOG\", \"TARGET_SCHEMA\", \"VS_INDEX\", \"VS_INDEX_BASE_TABLE\",\n    \"LLM_ENDPOINT_NAME\", \"MLFLOW_EXPERIMENT\", \"RETRIEVER_TOOL_NAME\", \"AGENT_NAME\",\n    \"APP_NAME\", \"MAILGUN_API_URL\", \"MAILGUN_API_KEY\", \"SENDER\", \"RECIPIENT\",\n    \"SMS_ACCOUNT_SID\", \"SMS_AUTH_TOKEN\", \"DATABRICKS_SQL_WAREHOUSE_ID\",\n]\nfor _k in _CONFIG_KEYS:\n    try:\n        _v = dbutils.widgets.get(_k)\n    except Exception:\n        _v = \"\"\n    if _v:\n        os.environ[_k] = _v\n"
+   "source": [
+    "import sys\n",
+    "sys.path.append(\"./tools\")"
+   ]
   },
   {
    "cell_type": "code",
@@ -260,7 +266,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 0,
    "metadata": {
     "application/vnd.databricks.v1+cell": {
      "cellMetadata": {
@@ -275,7 +281,20 @@
     }
    },
    "outputs": [],
-   "source": "from weatherwise_agent import AGENT\nfrom mlflow.types.responses import ResponsesAgentRequest\n\nresponse = AGENT.predict(ResponsesAgentRequest(input=[\n    {\n        \"role\": \"user\",\n        \"content\": \"I heard the weather in New York is going to be cold tomorrow. Which in-transit shipments are at risk of temperature excursions, and what supplier escalation steps should I take? Also is there a backup supplier nearby? Email me a full report and send me an super concise SMS message with an abbreviated summary\"\n    }\n]))\n\ndisplay(response)\n"
+   "source": [
+    "from weatherwise_agent import AGENT\n",
+    "\n",
+    "response = AGENT.predict({\n",
+    "    \"messages\": [\n",
+    "        {\n",
+    "            \"role\": \"user\",\n",
+    "            \"content\": \"I heard the weather in New York is going to be cold tomorrow. Which in-transit shipments are at risk of temperature excursions, and what supplier escalation steps should I take? Also is there a backup supplier nearby? Email me a full report and send me an super concise SMS message with an abbreviated summary\"\n",
+    "        }\n",
+    "    ]\n",
+    "})\n",
+    "\n",
+    "display(response)"
+   ]
   },
   {
    "cell_type": "markdown",
@@ -299,7 +318,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 0,
    "metadata": {
     "application/vnd.databricks.v1+cell": {
      "cellMetadata": {
@@ -314,7 +333,43 @@
     }
    },
    "outputs": [],
-   "source": "import datetime\nimport mlflow\nfrom weatherwise_agent import tools, LLM_ENDPOINT_NAME\nfrom databricks_langchain import VectorSearchRetrieverTool\nfrom mlflow.models.resources import DatabricksFunction, DatabricksServingEndpoint\nfrom unitycatalog.ai.langchain.toolkit import UnityCatalogTool\n\nresources = [DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT_NAME)]\nfor tool in tools:\n    if isinstance(tool, VectorSearchRetrieverTool):\n        resources.extend(tool.resources)\n    elif isinstance(tool, UnityCatalogTool):\n        resources.append(DatabricksFunction(function_name=tool.uc_function_name))\n\ninput_example = {\n    \"input\": [\n        {\n            \"role\": \"user\",\n            \"content\": \"I heard the weather in Philadelphia is going to be hot tomorrow. Which in-transit shipments are at risk of temperature excursions, and what supplier escalation steps should I take? Also is there a backup supplier nearby? Email me the results\"\n        }\n    ]\n}\n\n\nwith mlflow.start_run(run_name=f\"{AGENT_NAME}-ut-{datetime.datetime.now():%Y%m%d}\"):\n    logged_agent_info = mlflow.pyfunc.log_model(\n        name=AGENT_NAME,      # under model artifacts, the top level folder            \n        python_model=\"weatherwise_agent.py\",       # agent python file \n        input_example=input_example,\n        resources=resources,\n        code_paths=[\"tools/custom_tools/\"],      \n        extra_pip_requirements=[\n            \"databricks-connect\"\n        ]\n    )"
+   "source": [
+    "import datetime\n",
+    "import mlflow\n",
+    "from weatherwise_agent import tools, LLM_ENDPOINT_NAME\n",
+    "from databricks_langchain import VectorSearchRetrieverTool\n",
+    "from mlflow.models.resources import DatabricksFunction, DatabricksServingEndpoint\n",
+    "from unitycatalog.ai.langchain.toolkit import UnityCatalogTool\n",
+    "\n",
+    "resources = [DatabricksServingEndpoint(endpoint_name=LLM_ENDPOINT_NAME)]\n",
+    "for tool in tools:\n",
+    "    if isinstance(tool, VectorSearchRetrieverTool):\n",
+    "        resources.extend(tool.resources)\n",
+    "    elif isinstance(tool, UnityCatalogTool):\n",
+    "        resources.append(DatabricksFunction(function_name=tool.uc_function_name))\n",
+    "\n",
+    "input_example = {\n",
+    "    \"messages\": [\n",
+    "        {\n",
+    "            \"role\": \"user\",\n",
+    "            \"content\": \"I heard the weather in Philadelphia is going to be hot tomorrow. Which in-transit shipments are at risk of temperature excursions, and what supplier escalation steps should I take? Also is there a backup supplier nearby? Email me the results\"\n",
+    "        }\n",
+    "    ]\n",
+    "}\n",
+    "\n",
+    "\n",
+    "with mlflow.start_run(run_name=f\"{AGENT_NAME}-ut-{datetime.datetime.now():%Y%m%d}\"):\n",
+    "    logged_agent_info = mlflow.pyfunc.log_model(\n",
+    "        name=AGENT_NAME,      # under model artifacts, the top level folder            \n",
+    "        python_model=\"weatherwise_agent.py\",       # agent python file \n",
+    "        input_example=input_example,\n",
+    "        resources=resources,\n",
+    "        code_paths=[\"tools/custom_tools/\"],      \n",
+    "        extra_pip_requirements=[\n",
+    "            \"databricks-connect\"\n",
+    "        ]\n",
+    "    )"
+   ]
   },
   {
    "cell_type": "markdown",
@@ -336,7 +391,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 0,
    "metadata": {
     "application/vnd.databricks.v1+cell": {
      "cellMetadata": {
@@ -351,7 +406,21 @@
     }
    },
    "outputs": [],
-   "source": "# Load the model and create a prediction function to ask the model a question\n# without the boilerplate of the Responses request/response schema.\nlogged_model_uri = f\"runs:/{logged_agent_info.run_id}/{AGENT_NAME}\"\nloaded_model = mlflow.pyfunc.load_model(logged_model_uri)\n\ndef predict_wrapper(query):\n    # ResponsesAgent expects the OpenAI Responses input format\n    model_input = {\n        \"input\": [{\"role\": \"user\", \"content\": query}]\n    }\n    response = loaded_model.predict(model_input)\n\n    # Pull the assistant text out of the Responses output items\n    output = response[\"output\"] if isinstance(response, dict) else response.output\n    texts = []\n    for item in output:\n        item = item if isinstance(item, dict) else item.model_dump()\n        if item.get(\"type\") == \"message\":\n            for part in item.get(\"content\", []):\n                if isinstance(part, dict) and part.get(\"type\") in (\"output_text\", \"text\"):\n                    texts.append(part.get(\"text\", \"\"))\n    return texts[-1] if texts else \"\"\n"
+   "source": [
+    "# Load the model and create a prediction function to ask the model a question without the boilerplate syntax of message: role: user: conetent: syntax\n",
+    "logged_model_uri = f\"runs:/{logged_agent_info.run_id}/{AGENT_NAME}\"\n",
+    "loaded_model = mlflow.pyfunc.load_model(logged_model_uri)\n",
+    "\n",
+    "def predict_wrapper(query):\n",
+    "    # Format for chat-style models\n",
+    "    model_input = {\n",
+    "        \"messages\": [{\"role\": \"user\", \"content\": query}]\n",
+    "    }\n",
+    "    response = loaded_model.predict(model_input)\n",
+    "    \n",
+    "    messages = response['messages']\n",
+    "    return messages[-1]['content']"
+   ]
   },
   {
    "cell_type": "markdown",
@@ -386,7 +455,7 @@
     }
    },
    "outputs": [],
-   "source": "import pandas as pd\n\ncases = [\n    # Zimmer Biotech (ZB-SUP-2041)\n    {\n        \"request\": \"According to Zimmer Biotech SOP ZB-SUP-2041, outline Tier-1, Tier-2, and Tier-3 escalation contacts and the SLA.\",\n        \"expected_facts\": [\n            \"Zimmer Biotech SOP ZB-SUP-2041 defines tiers\",\n            \"Tier 1: logistics@zimmerbio.com\",\n            \"Tier 2: qa@zimmerbio.com; director.supply@zimmerbio.com\",\n            \"Tier 3: vp.ops@zimmerbio.com | +1-312-555-0100\",\n            \"SLA: Acknowledge 1h; CAPA 24h\"\n        ],\n    },\n    {\n        \"request\": \"Per ZB-SUP-2041, when do we escalate to Tier-2 at Zimmer Biotech?\",\n        \"expected_facts\": [\n            \"Tier-2 trigger: temp > 8\u00b0F over max or delay > 24h\",\n            \"Contacts: qa@zimmerbio.com; director.supply@zimmerbio.com\",\n            \"Tier-1 is logistics@zimmerbio.com; Tier-3 is vp.ops@zimmerbio.com\",\n            \"SLA: Acknowledge 1h; CAPA 24h\"\n        ],\n    },\n\n    # MedPro Devices (MP-SLA-007)\n    {\n        \"request\": \"Summarize MedPro Devices SLA MP-SLA-007 and the escalation path.\",\n        \"expected_facts\": [\n            \"MedPro MP-SLA-007 requires on-time \u2265 98%\",\n            \"Zero tolerance outside 2\u20138\u00b0C\",\n            \"Escalation: shipping@medpro.com \u2192 operations@medpro.com \u2192 ceo.office@medpro.com\",\n            \"If weather delay > 12h, reroute per SLA\"\n        ],\n    },\n\n    # Ortho Dynamics (OD-QA-115)\n    {\n        \"request\": \"For Ortho Dynamics OD-QA-115, list L1/L2/L3 escalation contacts and time targets.\",\n        \"expected_facts\": [\n            \"Ortho Dynamics OD-QA-115 defines L1/L2/L3\",\n            \"L1: warehouse.alerts@orthodynamics.com (\u22642h)\",\n            \"L2: dist.ops@orthodynamics.com (\u22644h)\",\n            \"L3: cmo.office@orthodynamics.com (\u22648h)\"\n        ],\n    },\n    {\n        \"request\": \"What does OD-QA-115 require when a temperature excursion is detected?\",\n        \"expected_facts\": [\n            \"Temp excursion \u2192 isolate lot\",\n            \"Notify QA per OD-QA-115\",\n            \"Follow L1/L2/L3 timing if required\",\n            \"Document in incident log\"\n        ],\n    },\n\n    # CardioNova (CN-COLD-003)\n    {\n        \"request\": \"List the CardioNova CN-COLD-003 escalation triggers and contact chain.\",\n        \"expected_facts\": [\n            \"CN-COLD-003 triggers: delay > 24h, ambient > 10\u00b0C, severe weather\",\n            \"Chain: supply@cardionova.com \u2192 qa@cardionova.com \u2192 compliance@cardionova.com\",\n            \"Record temperatures at handoff per storage guidance\"\n        ],\n    },\n\n    # ValveX Labs (VX-QMS-221)\n    {\n        \"request\": \"According to ValveX Labs VX-QMS-221, classify excursions by severity and actions.\",\n        \"expected_facts\": [\n            \"Minor (<1\u00b0C) \u2192 log only\",\n            \"Moderate (1\u20133\u00b0C) \u2192 notify QA\",\n            \"Critical (>3\u00b0C) \u2192 isolate and escalate\",\n            \"Contacts: qa.supervisor@valvex.com; compliance@valvex.com\"\n        ],\n    },\n\n    # OrthoCore (Supplier Playbook)\n    {\n        \"request\": \"Summarize OrthoCore escalation rules from Supplier Playbook.\",\n        \"expected_facts\": [\n            \"Notify ops@orthocore.com initially\",\n            \"If delay > 24h or temp > 8\u00b0C, escalate to qa@orthocore.com\",\n            \"Storage: maintain 2\u20138\u00b0C and record at handoff\"\n        ],\n    },\n\n    # MedAxis (Escalation Matrix)\n    {\n        \"request\": \"Provide MedAxis escalation matrix contacts (L1/L2/L3).\",\n        \"expected_facts\": [\n            \"MedAxis Escalation Matrix defines L1/L2/L3\",\n            \"L1: shipping@medaxis.io\",\n            \"L2: ops@medaxis.io\",\n            \"L3: exec@medaxis.io\"\n        ],\n    },\n\n    # Cross-check product storage (common across rows)\n    {\n        \"request\": \"What is the standard storage requirement mentioned for these products?\",\n        \"expected_facts\": [\n            \"Maintain 2\u20138\u00b0C (\u224836\u201346\u00b0F)\",\n            \"Record temperatures at handoff\"\n        ],\n    },\n\n    # Product-specific: Balloon Catheter, Ortho Dynamics\n    {\n        \"request\": \"For the Balloon Catheter (CATH-B08) under Ortho Dynamics, what are the escalation contacts and timing?\",\n        \"expected_facts\": [\n            \"Product: Balloon Catheter (CATH-B08)\",\n            \"Supplier: Ortho Dynamics (OD-QA-115)\",\n            \"L1: warehouse.alerts@orthodynamics.com (\u22642h)\",\n            \"L2: dist.ops@orthodynamics.com (\u22644h)\",\n            \"L3: cmo.office@orthodynamics.com (\u22648h)\"\n        ],\n    },\n\n    # Product-specific: Aortic Valve, ValveX Labs\n    {\n        \"request\": \"For Aortic Valve (VALVE-E11) at ValveX Labs, how are excursions classified and who is contacted?\",\n        \"expected_facts\": [\n            \"Product: Aortic Valve (VALVE-E11)\",\n            \"Supplier: ValveX Labs (VX-QMS-221)\",\n            \"Minor <1\u00b0C log; 1\u20133\u00b0C notify QA; >3\u00b0C isolate & escalate\",\n            \"qa.supervisor@valvex.com; compliance@valvex.com\"\n        ],\n    },\n\n    # Product-specific: Hip Implant Set at Zimmer\n    {\n        \"request\": \"For Hip Implant Set (IMPL-A21) from Zimmer Biotech, list Tier-1/2/3 contacts and SLA.\",\n        \"expected_facts\": [\n            \"Product: Hip Implant Set (IMPL-A21) | Supplier: Zimmer Biotech\",\n            \"Tier 1: logistics@zimmerbio.com\",\n            \"Tier 2: qa@zimmerbio.com; director.supply@zimmerbio.com\",\n            \"Tier 3: vp.ops@zimmerbio.com | +1-312-555-0100\",\n            \"Acknowledge 1h; CAPA 24h\"\n        ],\n    },\n\n    # Product-specific: Cardio Stent Kit at MedPro\n    {\n        \"request\": \"For Cardio Stent Kit (STENT-C13) at MedPro, summarize SLA and escalation ladder.\",\n        \"expected_facts\": [\n            \"Product: Cardio Stent Kit (STENT-C13) | Supplier: MedPro Devices\",\n            \"On-time \u2265 98%; zero tolerance outside 2\u20138\u00b0C\",\n            \"Escalation: shipping@medpro.com \u2192 operations@medpro.com \u2192 ceo.office@medpro.com\",\n            \"Reroute if weather delay > 12h\"\n        ],\n    },\n]\n\neval_df = pd.DataFrame(cases)\n\n# Format for mlflow.genai.evaluate with expected_facts as a list for Correctness scorer\neval_data = [\n    {\n        \"inputs\": {\"query\": row[\"request\"]},\n        \"expectations\": {\n            \"expected_facts\": row[\"expected_facts\"]\n        },\n    }\n    for _, row in eval_df.iterrows()\n]"
+   "source": "import pandas as pd\n\ncases = [\n    # Zimmer Biotech (ZB-SUP-2041)\n    {\n        \"request\": \"According to Zimmer Biotech SOP ZB-SUP-2041, outline Tier-1, Tier-2, and Tier-3 escalation contacts and the SLA.\",\n        \"expected_facts\": [\n            \"Zimmer Biotech SOP ZB-SUP-2041 defines tiers\",\n            \"Tier 1: logistics@zimmerbio.com\",\n            \"Tier 2: qa@zimmerbio.com; director.supply@zimmerbio.com\",\n            \"Tier 3: vp.ops@zimmerbio.com | +1-312-555-0100\",\n            \"SLA: Acknowledge 1h; CAPA 24h\"\n        ],\n    },\n    {\n        \"request\": \"Per ZB-SUP-2041, when do we escalate to Tier-2 at Zimmer Biotech?\",\n        \"expected_facts\": [\n            \"Tier-2 trigger: temp > 8°F over max or delay > 24h\",\n            \"Contacts: qa@zimmerbio.com; director.supply@zimmerbio.com\",\n            \"Tier-1 is logistics@zimmerbio.com; Tier-3 is vp.ops@zimmerbio.com\",\n            \"SLA: Acknowledge 1h; CAPA 24h\"\n        ],\n    },\n\n    # MedPro Devices (MP-SLA-007)\n    {\n        \"request\": \"Summarize MedPro Devices SLA MP-SLA-007 and the escalation path.\",\n        \"expected_facts\": [\n            \"MedPro MP-SLA-007 requires on-time ≥ 98%\",\n            \"Zero tolerance outside 2–8°C\",\n            \"Escalation: shipping@medpro.com → operations@medpro.com → ceo.office@medpro.com\",\n            \"If weather delay > 12h, reroute per SLA\"\n        ],\n    },\n\n    # Ortho Dynamics (OD-QA-115)\n    {\n        \"request\": \"For Ortho Dynamics OD-QA-115, list L1/L2/L3 escalation contacts and time targets.\",\n        \"expected_facts\": [\n            \"Ortho Dynamics OD-QA-115 defines L1/L2/L3\",\n            \"L1: warehouse.alerts@orthodynamics.com (≤2h)\",\n            \"L2: dist.ops@orthodynamics.com (≤4h)\",\n            \"L3: cmo.office@orthodynamics.com (≤8h)\"\n        ],\n    },\n    {\n        \"request\": \"What does OD-QA-115 require when a temperature excursion is detected?\",\n        \"expected_facts\": [\n            \"Temp excursion → isolate lot\",\n            \"Notify QA per OD-QA-115\",\n            \"Follow L1/L2/L3 timing if required\",\n            \"Document in incident log\"\n        ],\n    },\n\n    # CardioNova (CN-COLD-003)\n    {\n        \"request\": \"List the CardioNova CN-COLD-003 escalation triggers and contact chain.\",\n        \"expected_facts\": [\n            \"CN-COLD-003 triggers: delay > 24h, ambient > 10°C, severe weather\",\n            \"Chain: supply@cardionova.com → qa@cardionova.com → compliance@cardionova.com\",\n            \"Record temperatures at handoff per storage guidance\"\n        ],\n    },\n\n    # ValveX Labs (VX-QMS-221)\n    {\n        \"request\": \"According to ValveX Labs VX-QMS-221, classify excursions by severity and actions.\",\n        \"expected_facts\": [\n            \"Minor (<1°C) → log only\",\n            \"Moderate (1–3°C) → notify QA\",\n            \"Critical (>3°C) → isolate and escalate\",\n            \"Contacts: qa.supervisor@valvex.com; compliance@valvex.com\"\n        ],\n    },\n\n    # OrthoCore (Supplier Playbook)\n    {\n        \"request\": \"Summarize OrthoCore escalation rules from Supplier Playbook.\",\n        \"expected_facts\": [\n            \"Notify ops@orthocore.com initially\",\n            \"If delay > 24h or temp > 8°C, escalate to qa@orthocore.com\",\n            \"Storage: maintain 2–8°C and record at handoff\"\n        ],\n    },\n\n    # MedAxis (Escalation Matrix)\n    {\n        \"request\": \"Provide MedAxis escalation matrix contacts (L1/L2/L3).\",\n        \"expected_facts\": [\n            \"MedAxis Escalation Matrix defines L1/L2/L3\",\n            \"L1: shipping@medaxis.io\",\n            \"L2: ops@medaxis.io\",\n            \"L3: exec@medaxis.io\"\n        ],\n    },\n\n    # Cross-check product storage (common across rows)\n    {\n        \"request\": \"What is the standard storage requirement mentioned for these products?\",\n        \"expected_facts\": [\n            \"Maintain 2–8°C (≈36–46°F)\",\n            \"Record temperatures at handoff\"\n        ],\n    },\n\n    # Product-specific: Balloon Catheter, Ortho Dynamics\n    {\n        \"request\": \"For the Balloon Catheter (CATH-B08) under Ortho Dynamics, what are the escalation contacts and timing?\",\n        \"expected_facts\": [\n            \"Product: Balloon Catheter (CATH-B08)\",\n            \"Supplier: Ortho Dynamics (OD-QA-115)\",\n            \"L1: warehouse.alerts@orthodynamics.com (≤2h)\",\n            \"L2: dist.ops@orthodynamics.com (≤4h)\",\n            \"L3: cmo.office@orthodynamics.com (≤8h)\"\n        ],\n    },\n\n    # Product-specific: Aortic Valve, ValveX Labs\n    {\n        \"request\": \"For Aortic Valve (VALVE-E11) at ValveX Labs, how are excursions classified and who is contacted?\",\n        \"expected_facts\": [\n            \"Product: Aortic Valve (VALVE-E11)\",\n            \"Supplier: ValveX Labs (VX-QMS-221)\",\n            \"Minor <1°C log; 1–3°C notify QA; >3°C isolate & escalate\",\n            \"qa.supervisor@valvex.com; compliance@valvex.com\"\n        ],\n    },\n\n    # Product-specific: Hip Implant Set at Zimmer\n    {\n        \"request\": \"For Hip Implant Set (IMPL-A21) from Zimmer Biotech, list Tier-1/2/3 contacts and SLA.\",\n        \"expected_facts\": [\n            \"Product: Hip Implant Set (IMPL-A21) | Supplier: Zimmer Biotech\",\n            \"Tier 1: logistics@zimmerbio.com\",\n            \"Tier 2: qa@zimmerbio.com; director.supply@zimmerbio.com\",\n            \"Tier 3: vp.ops@zimmerbio.com | +1-312-555-0100\",\n            \"Acknowledge 1h; CAPA 24h\"\n        ],\n    },\n\n    # Product-specific: Cardio Stent Kit at MedPro\n    {\n        \"request\": \"For Cardio Stent Kit (STENT-C13) at MedPro, summarize SLA and escalation ladder.\",\n        \"expected_facts\": [\n            \"Product: Cardio Stent Kit (STENT-C13) | Supplier: MedPro Devices\",\n            \"On-time ≥ 98%; zero tolerance outside 2–8°C\",\n            \"Escalation: shipping@medpro.com → operations@medpro.com → ceo.office@medpro.com\",\n            \"Reroute if weather delay > 12h\"\n        ],\n    },\n]\n\neval_df = pd.DataFrame(cases)\n\n# Format for mlflow.genai.evaluate with expected_facts as a list for Correctness scorer\neval_data = [\n    {\n        \"inputs\": {\"query\": row[\"request\"]},\n        \"expectations\": {\n            \"expected_facts\": row[\"expected_facts\"]\n        },\n    }\n    for _, row in eval_df.iterrows()\n]"
   },
   {
    "cell_type": "markdown",
@@ -436,8 +505,8 @@
     "    Guidelines(           # your custom style/tone scorer\n",
     "        name=\"jj_tone\",\n",
     "        guidelines=\"\"\"Professional and concise:\n",
-    "        \u2022 No chit-chat or clarifying questions\n",
-    "        \u2022 No logs/JSON/system/meta\n",
+    "        • No chit-chat or clarifying questions\n",
+    "        • No logs/JSON/system/meta\n",
     "        Pass if clear, factual, and structured; fail if casual/wordy or asks questions.\"\"\"\n",
     "    ),\n",
     "]"
