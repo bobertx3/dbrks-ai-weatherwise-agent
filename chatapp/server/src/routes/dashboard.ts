@@ -6,8 +6,8 @@ import { authMiddleware, requireAuth } from '../middleware/auth';
 export const dashboardRouter = Router();
 dashboardRouter.use(authMiddleware);
 
-const CATALOG = 'bx4';
-const SCHEMA = 'agentbricks_weatherwise';
+const CATALOG = process.env.DATABRICKS_CATALOG || 'bldemos';
+const SCHEMA = process.env.DATABRICKS_SCHEMA || 'agentbricks_weatherwise';
 
 async function executeSql(sql: string): Promise<any[]> {
   const token = await getDatabricksToken();
