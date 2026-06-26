@@ -7,10 +7,10 @@ workspace:
 variables:
   serving_endpoint_name:
     description: "Name of the model serving endpoint for the weatherwise agent"
-    default: "agents_bx4-agentbricks_weatherwise-weatherwise"
+    default: "agents_bldemos-agentbricks_weatherwise-weatherwise"
   sql_warehouse_id:
     description: "SQL warehouse ID for the dashboard and Genie features"
-    default: "0d3bda4f46281ab5"
+    default: "35670cdf44904d28"
   resource_name_suffix:
     description: "Suffix for resource names to avoid collisions"
 

@@ -8,3 +8,5 @@ chatapp/.env
 
 # Databricks bundle
 .databricks/
+# Local cluster id from create_compute.sh
+.cluster_id

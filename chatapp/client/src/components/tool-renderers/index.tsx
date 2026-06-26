@@ -21,7 +21,7 @@ export function renderToolOutput(
 
     switch (toolName) {
       case 'get_shipments':
-      case 'bx4__agentbricks_weatherwise__get_shipments': {
+      case 'bldemos__agentbricks_weatherwise__get_shipments': {
         const items = Array.isArray(data) ? data : [data];
         if (items.length > 0 && items[0].shipment_id) {
           return <ShipmentTable data={items} />;
@@ -30,7 +30,7 @@ export function renderToolOutput(
       }
 
       case 'get_supplier_details':
-      case 'bx4__agentbricks_weatherwise__get_supplier_details': {
+      case 'bldemos__agentbricks_weatherwise__get_supplier_details': {
         const items = Array.isArray(data) ? data : [data];
         if (items.length > 0 && items[0].supplier_id) {
           return <SupplierCards data={items} />;
@@ -39,7 +39,7 @@ export function renderToolOutput(
       }
 
       case 'get_backup_inventory':
-      case 'bx4__agentbricks_weatherwise__get_backup_inventory': {
+      case 'bldemos__agentbricks_weatherwise__get_backup_inventory': {
         const items = Array.isArray(data) ? data : [data];
         if (items.length > 0 && items[0].site_id) {
           return <InventoryTable data={items} />;
