@@ -170,7 +170,7 @@ flowchart LR
 | `check_weather` | Get live or forecasted weather for destination routes |
 | `send_email` | Send escalation summaries via **Mailgun** (or any email service API) |
 | `send_sms` | Send short alerts via **Twilio SMS** |
-| `send_connect_sms` | Event networking: greeting text, then the LinkedIn QR image (MMS) right after |
+| `send_connect_sms` | Event networking: one greeting text with a LinkedIn link (`LINKEDIN_URL`) |
 
 ---
 

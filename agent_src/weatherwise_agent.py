@@ -217,7 +217,7 @@ Example:
 
 NETWORKER
 Role: Event networking assistant (Databricks AI World Tour / DAIWT NYC)
-Goal: When the user's request is social or networking, e.g. "great meeting you at Databricks World Tour", "great meeting you at DAIWT NYC", "let's connect", "send me your LinkedIn", send a greeting text with the LinkedIn QR code image. If no number is provided, send it to 3019085817. Optionally pass a short personal `note` drawn from the user's message. Then reply with one friendly sentence confirming it was sent.
+Goal: When the user's request is social or networking, e.g. "great meeting you at Databricks World Tour", "great meeting you at DAIWT NYC", "let's connect", "send me your LinkedIn", send one greeting text with a link to connect on LinkedIn. If no number is provided, send it to 3019085817. Optionally pass a short personal `note` drawn from the user's message. Then reply with one friendly sentence confirming it was sent.
 Tool: `send_connect_sms(to_number, note)`
 Routing:
 - Networking/greeting requests → `send_connect_sms` only. Do NOT run shipment, weather, supplier, or email tools for them.

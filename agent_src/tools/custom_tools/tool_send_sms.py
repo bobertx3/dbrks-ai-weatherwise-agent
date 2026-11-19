@@ -70,24 +70,12 @@ def send_sms(to_number: str, message: str) -> str:
         return f"❌ Error sending SMS: {type(e).__name__}: {e}"
 
 # ---------------------------------------------------------------------------
-# Networking / "let's connect" text: greeting first, then the LinkedIn QR image
+# Networking / "let's connect" text: one SMS with the greeting and LinkedIn link
 # ---------------------------------------------------------------------------
-import time
+# Override with LINKEDIN_URL to point at someone else's profile.
+LINKEDIN_URL = os.getenv("LINKEDIN_URL", "https://www.linkedin.com/in/ybbob/")
 
-# Twilio fetches MMS media from a public URL (it cannot take a file upload).
-# Override with LINKEDIN_IMAGE_URL if the image moves (e.g. to main or a CDN).
-LINKEDIN_IMAGE_URL = os.getenv(
-    "LINKEDIN_IMAGE_URL",
-    "https://raw.githubusercontent.com/bobertx3/dbrks-ai-weatherwise-agent/dev/img/bobbyleach-linkedin.JPG",
-)
-
-CONNECT_GREETING = (
-    "Hi from the WeatherWise Agent! Great meeting you at Databricks AI World Tour NYC.\n\n"
-    "Let's connect on LinkedIn: scan the QR code coming up next."
-)
-
-# Statuses meaning Twilio has handed the text to the carrier (or it is final)
-_SENT_STATUSES = ("sent", "delivered", "undelivered", "failed")
+CONNECT_GREETING = "Hi from the WeatherWise Agent! Great meeting you at Databricks AI World Tour NYC."
 
 
 def _e164(number: str) -> str:
@@ -102,48 +90,26 @@ def _e164(number: str) -> str:
     return number
 
 
-def _wait_until_sent(client: Client, sid: str, timeout_s: float = 15.0) -> str:
-    """Poll until Twilio has sent the message, so the next message lands after it."""
-    deadline = time.time() + timeout_s
-    status = "queued"
-    while time.time() < deadline:
-        status = client.messages(sid).fetch().status
-        if status in _SENT_STATUSES:
-            break
-        time.sleep(1)
-    return status
-
-
 @tool("send_connect_sms", return_direct=True)
 def send_connect_sms(to_number: str, note: str = "") -> str:
     """
-    Sends a networking greeting text followed by a LinkedIn QR code image.
+    Sends one networking text: a greeting plus a link to connect on LinkedIn.
     Use ONLY for networking / social requests such as "great meeting you at
     Databricks World Tour / DAIWT NYC", "let's connect", or "send my LinkedIn".
     Do NOT use for shipment, weather, or risk updates (use send_sms for those).
 
-    The greeting text is sent first; once Twilio reports it sent, the image is
-    sent as a second message so it appears below the text on the phone.
-
     Arguments:
       to_number: Recipient phone number, E.164 preferred (e.g. '+13019085817')
-      note:      Optional short personal line appended to the greeting
+      note:      Optional short personal line added after the greeting
     """
     to_number = _e164(to_number)
     try:
         client = _twilio_client()
-        body = CONNECT_GREETING + (f"\n\n{note.strip()}" if note and note.strip() else "")
-        text = client.messages.create(body=body, from_=FROM_NUMBER, to=to_number)
-        text_status = _wait_until_sent(client, text.sid)
-        if text_status in ("undelivered", "failed"):
-            return f"❌ Greeting text to {to_number} {text_status} (SID={text.sid}); image not sent"
-
-        image = client.messages.create(
-            media_url=[LINKEDIN_IMAGE_URL], from_=FROM_NUMBER, to=to_number
-        )
-        return (
-            f"✅ Connect text + LinkedIn QR sent to {to_number} "
-            f"(text SID={text.sid}, image SID={image.sid})"
-        )
+        parts = [CONNECT_GREETING]
+        if note and note.strip():
+            parts.append(note.strip())
+        parts.append(f"Let's connect on LinkedIn:\n{LINKEDIN_URL}")
+        msg = client.messages.create(body="\n\n".join(parts), from_=FROM_NUMBER, to=to_number)
+        return f"✅ Connect text with LinkedIn link sent to {to_number} (SID={msg.sid})"
     except Exception as e:
         return f"❌ Error sending connect SMS: {type(e).__name__}: {e}"

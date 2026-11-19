@@ -167,8 +167,8 @@ const TOOLS: Record<string, Meta> = {
     desc: "Emails the escalation summary to the on-call recipient." },
   send_sms: { title: "Send SMS alert", source: "Twilio", kind: "action", icon: MessageSquare,
     desc: "Texts a short risk summary." },
-  send_connect_sms: { title: "Send LinkedIn connect text", source: "Twilio MMS", kind: "action", icon: BellRing,
-    desc: "Greeting text, then the LinkedIn QR code." },
+  send_connect_sms: { title: "Send LinkedIn connect text", source: "Twilio", kind: "action", icon: BellRing,
+    desc: "One greeting text with a link to connect on LinkedIn." },
 };
 
 /** bldemos__agentbricks_weatherwise__get_shipments -> get_shipments */
