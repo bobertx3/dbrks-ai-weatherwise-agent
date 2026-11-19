@@ -156,7 +156,7 @@ export default function CommandCenter({
                   <th>Shipment</th>
                   <th>Product · route</th>
                   <th>Status</th>
-                  <th title="STAT: needed for a scheduled procedure, ship immediately">Priority</th>
+                  <th className="col-pri" title="STAT: needed for a scheduled procedure, ship immediately">Priority</th>
                   <th className="col-eta">ETA</th>
                   <th>Surgery</th>
                   <th className="num">Sensor °F</th>
@@ -166,7 +166,7 @@ export default function CommandCenter({
               <tbody>
                 {(showAll ? rows : rows.slice(0, ROW_LIMIT)).map((r) => (
                   <tr key={r.shipment_id} className={focus?.shipment_id === r.shipment_id ? "sel" : ""} onClick={() => pick(r)}>
-                    <td className="mono teal">{r.shipment_id}</td>
+                    <td className="mono teal">{r.shipment_id}{r.priority === "STAT" && <span className="stat-dot" title="STAT"> ●</span>}</td>
                     <td className="prod" title={`${r.product_name}\n${r.origin} → ${r.destination}`}>
                       <div className="p-name">{r.product_name}</div>
                       <div className="p-route">{r.origin} → {r.destination}</div>
@@ -175,7 +175,7 @@ export default function CommandCenter({
                       <span className={`tag ${r.status === "Delayed" ? "delayed" : r.status === "In-Transit" ? "transit" : ""}`}>{r.status}</span>
                       {r.status === "Delayed" && r.delay_hours > 0 && <span className="muted small"> +{r.delay_hours}h</span>}
                     </td>
-                    <td>
+                    <td className="col-pri">
                       <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: needed for a scheduled procedure, ship immediately" : undefined}>
                         {r.priority}
                       </span>

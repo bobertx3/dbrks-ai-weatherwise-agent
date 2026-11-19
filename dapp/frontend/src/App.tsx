@@ -42,7 +42,7 @@ export default function App() {
         <div className="brand">
           <div className="eyebrow">
             <span className={`dot ${agentOn ? "" : "off"}`} />
-            {agentOn ? "AGENT LIVE" : "AGENT NOT CONFIGURED"} · {health?.catalog ?? "…"}
+            {agentOn ? "AGENT LIVE" : "AGENT NOT CONFIGURED"}<span className="eyebrow-cat"> · {health?.catalog ?? "…"}</span>
           </div>
           <h1>
             MedTech <span className="coral">Weatherwise</span> Agent <span className="tagline">- Intelligent Supply Chain</span>
@@ -72,7 +72,7 @@ export default function App() {
             </a>
           )}
           <button className={`btn coral-solid ${assistOpen ? "active" : ""}`} onClick={() => setAssistOpen((o) => !o)}>
-            <Bot size={13} /> Ask WeatherWise
+            <Bot size={13} /> <span className="bl-ask">Ask WeatherWise</span><span className="bl-ask-short">Ask</span>
           </button>
         </div>
       </header>

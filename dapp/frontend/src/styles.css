@@ -741,3 +741,63 @@ html, body, #root { height: auto; min-height: 100%; }
 .inv-legend .sw.lo { background: rgba(79, 209, 197, 0.15); }
 .inv-legend .sw.low { background: rgba(242, 114, 94, 0.35); }
 @container (max-width: 760px) { .inv-grid { font-size: 11px; } .inv-grid th { font-size: 9px; letter-spacing: 0.04em; } .inv-grid th.site, .inv-grid td.site { width: 30%; } }
+
+/* ══ Mobile (phones, ≤ 720px) ═════════════════════════════════════════════════ */
+.bl-ask-short { display: none; }
+.stat-dot { display: none; color: var(--coral); font-size: 10px; }
+@media (max-width: 720px) {
+  /* Header: title row, then one row of icon buttons */
+  .topbar { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px 14px; }
+  .brand .eyebrow { font-size: 9.5px; }
+  .eyebrow-cat { display: none; }
+  .brand h1 { font-size: 18px; margin-top: 2px; }
+  .actions { justify-content: space-between; gap: 6px; }
+  .actions .btn { padding: 7px 0; flex: 1 1 0; justify-content: center; min-width: 0; }
+  .actions .btn .bl, .actions .btn .bl.shrink, .actions .btn svg + svg { display: none; }
+  .actions .btn.coral-solid { flex: 1.6 1 0; }
+  .bl-ask { display: none; }
+  .bl-ask-short { display: inline; }
+
+  .command { padding: 12px 12px 24px; }
+  .pane-head h2 { white-space: normal; font-size: 16px; }
+
+  /* Assistant: full-screen sheet above everything */
+  .assist, .assist.open { position: fixed; inset: 0; top: 0; height: 100dvh; z-index: 1200; }
+  .assist { width: 0; }
+  .assist.open { width: 100vw; }
+  .assist-head, .assist-panel { min-width: 0; }
+  .assist-head { padding: 10px 12px; }
+  .assist-tabs button { padding: 7px 10px; font-size: 12px; }
+  .assist-body { padding: 12px; }
+  .assist-sub { display: none; }
+  .io-pair { grid-template-columns: 1fr; }
+  .step-status .step-time { display: none; }
+
+  /* Map: shorter, only the view switcher on top; list/details card below the map */
+  .netmap.embedded { height: auto; overflow: visible; border: 0; background: none; }
+  .netmap.embedded .netmap-canvas { height: auto; }
+  .netmap.embedded .netmap-canvas .leaflet-container { height: 340px !important; border: 1px solid var(--line); border-radius: 12px; }
+  .map-toolbar { right: 10px; }
+  .map-toolbar .ov-group:not(:first-child), .map-toolbar .ov-note, .map-legend { display: none; }
+  .map-ov.map-panel { position: static; width: auto; max-height: none; margin-top: 10px; overflow: visible; }
+  .map-panel .card.tight { backdrop-filter: none; box-shadow: none; }
+
+  /* Table: hide priority (STAT shows as a dot by the ID) and ETA */
+  .cc-table { padding: 12px; }
+  .cc-table .col-pri, .cc-table .col-eta { display: none; }
+  .stat-dot { display: inline; }
+  .chips { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+  .chip { flex: none; }
+
+  /* Inventory grid scrolls sideways inside its card */
+  .inv-wrap { overflow-x: auto; }
+  .inv-grid { min-width: 620px; }
+  .inv-seg button { padding: 5px 8px; font-size: 11px; }
+}
+@media (max-width: 720px) {
+  .cc-table { overflow-x: visible; }
+  .cc-table .table-wrap.cc-rows { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .cc-table table { min-width: 600px; }
+  .cc-table td.prod { width: 210px; max-width: 210px; }
+  .cc-rows thead th { position: static; }
+}
