@@ -141,8 +141,9 @@ export default function NetworkMap({
   const hotList = useMemo(
     () =>
       (data?.routes ?? [])
-        .filter((r) => r.misses_procedure || (r.excursion && r.priority !== "Routine"))
-        .sort((a, b) => Number(b.misses_procedure) - Number(a.misses_procedure) || a.procedure_date.localeCompare(b.procedure_date)),
+        // Same definition as the dashboard, metric view and agent: arrives after the procedure.
+        .filter((r) => r.misses_procedure)
+        .sort((a, b) => a.procedure_date.localeCompare(b.procedure_date) || a.shipment_id.localeCompare(b.shipment_id)),
     [data],
   );
 
@@ -295,7 +296,7 @@ export default function NetworkMap({
                       </div>
                       <div className="hl-main">{r.product_name} → {facilityById[r.destination_facility_id]?.facility_name ?? r.destination}</div>
                       <div className="hl-sub">
-                        {r.misses_procedure ? `ETA ${r.eta_date} · surgery ${r.procedure_date}` : `${r.last_recorded_temp_f}°F sensor · max ${r.temperature_max_f}°F`}
+                        {`ETA ${r.eta_date} · surgery ${r.procedure_date}`}
                       </div>
                     </li>
                   ))}
