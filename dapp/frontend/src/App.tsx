@@ -45,7 +45,7 @@ export default function App() {
             {agentOn ? "AGENT LIVE" : "AGENT NOT CONFIGURED"}<span className="eyebrow-cat"> · {health?.catalog ?? "…"}</span>
           </div>
           <h1>
-            MedTech <span className="coral">Weatherwise</span> Agent <span className="tagline">- Intelligent Supply Chain</span>
+            MEDTECH <span className="coral">Weatherwise</span> Agent <span className="tagline">- Intelligent Supply Chain</span>
           </h1>
           <p>Temperature-controlled logistics for surgical supplies. Protect every shipment in transit and escalate before it spoils.</p>
         </div>
