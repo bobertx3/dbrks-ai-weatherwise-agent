@@ -12,7 +12,25 @@ AGENT_NAME   = os.environ.get("AGENT_NAME")
 # ── Styles (mirror the app: navy page, teal + coral accents) ──
 PAGE, PANEL, INK, SOFT, TEAL, CORAL, LINE = "#0a1017", "#ffffff", "#1b2733", "#5b6f82", "#2bb3a8", "#f2725e", "#e3e9ef"
 FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "WeatherWise Agent")
+CORAL_DARK = "#d63b22"  # readable red on white
 FONT = "-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif"
+
+# Risk words are always shown in bold red, so the problem jumps out without relying on the LLM.
+_RISK_WORDS = re.compile(
+    r"(?<![\w>])(too cold|too warm|too hot|starting to thaw|thawing|freezing|frozen solid|heat spike|"
+    r"warmer than (?:its|the) [^<,;)]*?limit|colder than (?:its|the) [^<,;)]*?limit)(?![\w<])",
+    re.IGNORECASE,
+)
+
+
+def _flag_risk(html_text: str) -> str:
+    """Wrap risk phrases (outside HTML tags) in bold red."""
+    parts = re.split(r"(<[^>]+>)", html_text or "")
+    return "".join(
+        p if p.startswith("<") else _RISK_WORDS.sub(lambda m: f"<b style='color:{CORAL_DARK};'>{m.group(1)}</b>", p)
+        for p in parts
+    )
+
 
 def _as_list(value: Optional[str]):
     """Split comma/semicolon-separated recipients into a clean list."""
@@ -57,11 +75,11 @@ def send_email(recipient: Optional[str] = None, subject: str = "", message: str 
             f"border-radius:8px;padding:10px 12px;font-weight:600;color:#3d2f00;'>&#128222; {_html.escape(call_to_action)}</div>"
             if call_to_action and call_to_action.strip() else ""
         )
-        summ = f"<div style='font-size:15px;line-height:1.5;margin:0;'>{summary}</div>" if summary and summary.strip() else ""
+        summ = f"<div style='font-size:15px;line-height:1.5;margin:0;'>{_flag_risk(summary)}</div>" if summary and summary.strip() else ""
         details = (
             f"<div style='margin-top:16px;padding-top:12px;border-top:1px solid {LINE};font-size:13.5px;line-height:1.5;color:#33414e;'>"
             f"<div style='font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:{SOFT};margin-bottom:6px;'>Details</div>"
-            f"{message}</div>"
+            f"{_flag_risk(message)}</div>"
             if message and message.strip() else ""
         )
         html = f"""
