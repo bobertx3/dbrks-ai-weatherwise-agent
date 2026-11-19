@@ -171,7 +171,7 @@ export function DataFlowModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal
       title="Data Flow"
-      subtitle="Cold-chain data to a governed escalation, all on Databricks · bldemos.agentbricks_weatherwise"
+      subtitle="Temperature-controlled logistics data to a governed escalation, all on Databricks · bldemos.agentbricks_weatherwise"
       onClose={onClose}
       wide
       compact
@@ -221,9 +221,9 @@ export function DataFlowModal({ onClose }: { onClose: () => void }) {
             <div className="lbl c">MODEL SERVING · AGENT</div>
             <Box tone="agent" title="WeatherWise agent" sub="LangGraph · ResponsesAgent" />
             <div className="df-down" aria-hidden>↓</div>
-            <Box tone="gw" title="Unity AI Gateway" sub="governed LLM access · rate limits · usage + payload logging" />
+            <Box tone="gw" title="Unity AI Gateway" sub="model service weatherwise_llm · agent SP EXECUTE · inference table weatherwise_llm_payload" />
             <div className="df-down" aria-hidden>↓</div>
-            <Box tone="llm" title="GPT" sub="system.ai.gpt-5-6-sol" />
+            <Box tone="llm" title="GPT 5.6" sub="system.ai.databricks-gpt-5-6-sol" />
             <div className="lbl">AGENT TOOLS</div>
             {DF_TOOLS.map(([name, sub, note]) => (
               <div className="df-tool" key={name}>

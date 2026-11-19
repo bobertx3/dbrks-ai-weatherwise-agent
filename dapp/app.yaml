@@ -19,3 +19,9 @@ env:
     valueFrom: sql-warehouse
   - name: GENIE_SPACE_ID
     valueFrom: genie-space
+  # Lakebase endpoint path used to mint OAuth database credentials (enables the Lakebase read path)
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
+  # Postgres schema of the Lakebase synced tables (PGHOST/PGUSER/PGDATABASE come from the `postgres` resource)
+  - name: LAKEBASE_SCHEMA
+    value: agentbricks_weatherwise

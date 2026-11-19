@@ -134,7 +134,7 @@ export default function Dashboard({ catalog, warehouseOk }: { catalog: string; w
   );
 }
 
-function Kpi({ label, value, caption, tone }: { label: string; value?: number; caption: string; tone?: "teal" | "coral" | "amber" }) {
+export function Kpi({ label, value, caption, tone }: { label: string; value?: number; caption: string; tone?: "teal" | "coral" | "amber" }) {
   const color = tone === "teal" ? "var(--teal)" : tone === "coral" ? "var(--coral)" : tone === "amber" ? "var(--amber)" : "var(--text)";
   return (
     <div className="kpi">
@@ -147,7 +147,7 @@ function Kpi({ label, value, caption, tone }: { label: string; value?: number; c
   );
 }
 
-function BarRow({ name, value, max, color }: { name: string; value: number; max: number; color: string }) {
+export function BarRow({ name, value, max, color }: { name: string; value: number; max: number; color: string }) {
   return (
     <div className="bar-row">
       <div className="name" title={name}>{name}</div>
@@ -159,7 +159,7 @@ function BarRow({ name, value, max, color }: { name: string; value: number; max:
   );
 }
 
-function Skeleton() {
+export function Skeleton() {
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {[0, 1, 2].map((i) => (

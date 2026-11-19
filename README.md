@@ -52,14 +52,14 @@ flowchart LR
 
   subgraph SERVE["Model Serving · agent"]
     A[WeatherWise agent<br/>LangGraph · ResponsesAgent]
-    GW[Unity AI Gateway<br/>rate limits · usage + payload logging]
-    LLM[GPT<br/>system.ai.gpt-5-6-sol]
-    X[External tools<br/>check_weather · send_email · send_sms]
+    GW[Unity AI Gateway model service<br/>weatherwise_llm · inference table weatherwise_llm_payload]
+    LLM[GPT 5.6<br/>system.ai.databricks-gpt-5-6-sol]
+    X[External tools<br/>check_weather · send_email · send_sms · send_connect_sms]
     A --> GW --> LLM
     A --> X
   end
 
-  ML[MLflow<br/>evaluation · traces]
+  ML[MLflow<br/>evaluation · traces → UC weatherwise_traces]
   G[Genie<br/>Supply Chain Explorer]
   APP[Databricks App<br/>dashboard · agent chat · Ask Genie]
   U((Supply chain<br/>coordinator))
@@ -78,7 +78,7 @@ flowchart LR
 | Stage | What happens | Where |
 |---|---|---|
 | **Ingest** | CSVs land as Delta tables; UC functions and the SOP vector index are created | `data/setup_data.ipynb`, `agent_src/tools/uc_tools/` |
-| **Build + evaluate** | Agent is unit-tested, evaluated with LLM judges, logged and registered to UC | `agent_src/agent_eval_notebook.ipynb` (Lakeflow Job `weatherwise-agent-eval`) |
+| **Build + evaluate** | Agent is unit-tested, evaluated with LLM judges, logged and registered to UC; traces are archived to UC table `weatherwise_traces` | `agent_src/agent_eval_notebook.ipynb` (Lakeflow Job `weatherwise-agent-eval`) |
 | **Serve** | `agents.deploy` puts the registered version on Model Serving; the agent calls GPT through the **Unity AI Gateway** | endpoint `agents_bldemos-agentbricks_weatherwise-weatherwise` |
 | **Experience** | The app reads KPIs from the SQL warehouse, chats with the agent endpoint, and asks Genie | `dapp/` (app `weatherwise-chat-agent`) |
 
@@ -170,6 +170,7 @@ flowchart LR
 | `check_weather` | Get live or forecasted weather for destination routes |
 | `send_email` | Send escalation summaries via **Mailgun** (or any email service API) |
 | `send_sms` | Send short alerts via **Twilio SMS** |
+| `send_connect_sms` | Event networking: greeting text, then the LinkedIn QR image (MMS) right after |
 
 ---
 
@@ -177,10 +178,22 @@ flowchart LR
 
 | File | Description |
 |------|--------------|
-| `shipments.csv` | Shipment details, ETA, carrier, and temperature logs |
+| `shipments.csv` | Shipment details, ETA, carrier, and temperature logs. Each row carries its product's own allowed range (`temperature_min_f` / `temperature_max_f`) |
 | `suppliers.csv` | Supplier contacts and escalation references |
 | `inventory.csv` | Warehouse and backup inventory data |
-| `supplier_sops.csv` | Supplier SOPs and escalation documents (for RAG) |
+| `supplier_sops.csv` | Product-specific supplier SOPs and escalation documents (for RAG), one per product |
+
+Synthetic product lines (fictional, based on real device and biologic categories):
+
+| Product | Based on | Allowed range (°F) | Why |
+|---------|----------|--------------------|-----|
+| Frozen Fibrin Sealant Kit | Frozen topical fibrin sealant | -22 to -4 | Must stay frozen; a dry-ice gap thaws it |
+| Frozen Bone Allograft (cryopreserved) | Cryopreserved bone tissue | -112 to -40 | Deep-frozen; warming means quarantine |
+| Refrigerated Thrombin Hemostat | Refrigerated topical thrombin | 36 to 46 | 2–8 °C; freezing or warming is an excursion |
+| Corneal Tissue Graft (cold-storage medium) | Eye-bank corneal graft | 36 to 46 | 2–8 °C; freezing destroys the tissue |
+| Bioprosthetic Aortic Valve (bovine tissue) | Bioprosthetic tissue valve | 50 to 77 | Room temperature; never freeze |
+| Cardiac Stent Kit (coated) | Drug-eluting coronary stent | 59 to 77 | Heat degrades the drug coating |
+| Drug-Coated Balloon Catheter (paclitaxel) | Paclitaxel drug-coated balloon | 59 to 86 | Upper-limit product; heat is the failure mode |
 
 ---
 
@@ -215,7 +228,7 @@ agent_src/
 ├── agent_eval_notebook.ipynb     # Unit test → log → evaluate → register (UC) → deploy (Model Serving)
 └── tools/
     ├── uc_tools/                 # UC SQL functions + supplier SOP vector index notebooks
-    └── custom_tools/             # check_weather (Open-Meteo), send_email (Mailgun), send_sms (Twilio)
+    └── custom_tools/             # check_weather (Open-Meteo), send_email (Mailgun), send_sms + send_connect_sms (Twilio)
 
 dapp/                             # Databricks App: FastAPI backend + React frontend
 ├── app.py                        # /api/health · /api/overview · /api/shipments/at-risk
@@ -223,7 +236,7 @@ dapp/                             # Databricks App: FastAPI backend + React fron
 ├── app.yaml                      # Runtime env; valueFrom keys match bundle resource names
 ├── requirements.txt
 ├── frontend/                     # Vite + React 19 + lucide (no Tailwind) → builds into dapp/static
-│   └── src/components/           # Dashboard · AgentChat · GenieDrawer · Modals · Markdown
+│   └── src/components/           # CommandCenter · NetworkMap · AssistantDrawer (AgentChat + GeniePanel) · Modals · Markdown
 └── static/                       # Built SPA (committed so the app deploys without a Node build)
 
 data/                             # setup_data.ipynb + demo CSVs
@@ -232,7 +245,15 @@ tests/manually_test_tools.ipynb   # Manual tool checks (weather, email, SMS)
 img/                              # README / solution-brief screenshots
 ```
 
-**App layout.** Split screen: live supply-chain dashboard (KPIs, status mix, on-hand by site, at-risk shipments) on the left, WeatherWise agent chat on the right, and **Ask Genie** as a slide-out drawer. Header buttons open **Problem & Solution**, **Outcome Maps** (Life Sciences), and the animated **Data Flow**.
+**App layout.** One **Command Center** page:
+- KPI strip (shipments, in transit, delayed, temperature excursions, surgeries at risk, on-hand units)
+- US **network map** (supply centers, distribution centers, hospitals, clinics, routes colored by risk) with a "Surgeries at risk" list
+- **Active shipments** table with **status chips** (All · In-Transit · Delayed · …) that filter the table *and* the map's routes; clicking a row highlights the route; **Ask** sends that shipment to the agent
+- On-hand units by site
+
+A push-style **assistant drawer** (header button or floating "Ask WeatherWise") holds two tabs: the **WeatherWise Agent** (acts: tools, SOPs, alerts; shows a grouped, expandable tool-call trace) and **Ask Genie** (answers data questions with SQL). Header buttons open **Problem & Solution**, **Outcome Maps** (Life Sciences), and the animated **Data Flow**.
+
+Priority **STAT** = needed for a scheduled procedure (ship immediately); **Surgery at risk** = ETA after the procedure date; **excursion** = latest sensor reading above the SOP max.
 
 **Bundle resources** (`databricks.yml`, target `dev` by default):
 
@@ -255,9 +276,11 @@ Copy `_env` to `.env` and fill it in. `.env` is gitignored but uploaded to your 
 | `AGENT_NAME` | notebook, email tool | UC model name `<catalog>.<schema>.<AGENT_NAME>`; email sender name |
 | `MLFLOW_EXPERIMENT` | notebook | Experiment under `/Users/<you>/` |
 | `VS_INDEX`, `VS_INDEX_BASE_TABLE`, `RETRIEVER_TOOL_NAME` | agent, vector index notebook | SOP retrieval |
-| `AI_GATEWAY_MODEL` | agent | e.g. `system.ai.gpt-5-6-sol` (required) |
+| `AI_GATEWAY_MODEL` | agent, `setup_ai_gateway` | Unity AI Gateway **model service** the agent calls, e.g. `bldemos.agentbricks_weatherwise.weatherwise_llm` (required) |
+| `LLM_DESTINATION_MODEL` | `setup_ai_gateway`, agent | Model the service routes to, e.g. `system.ai.databricks-gpt-5-6-sol` |
+| `AGENT_LLM_SECRET_SCOPE` | notebook | Secret scope holding the agent LLM service principal's OAuth credentials (default `weatherwise-agent`) |
 | `AI_GATEWAY_BASE_URL` | agent | `https://<workspace>/ai-gateway/mlflow/v1` |
-| `DATABRICKS_HOST`, `DATABRICKS_TOKEN` | agent | Gateway auth; passed to the serving endpoint at deploy |
+| `DATABRICKS_HOST`, `DATABRICKS_TOKEN` | local runs only | **Not needed** in the workspace (job identity) and **not** passed to the endpoint |
 | `MAILGUN_API_URL`, `MAILGUN_API_KEY`, `SENDER`, `RECIPIENT` | `send_email` | Optional |
 | `SMS_ACCOUNT_SID`, `SMS_AUTH_TOKEN`, `SMS_ACCOUNT_ID` | `send_sms` | Optional. Either an API key (`SK…` + key secret + `SMS_ACCOUNT_ID="AC…"`) or the account SID (`AC…`) + Auth Token |
 | `WAREHOUSE_ID`, `GENIE_ID` | reference | The app gets these from bundle resources (`databricks.yml`), not `.env` |
@@ -305,6 +328,29 @@ The job runs `agent_src/agent_eval_notebook.ipynb` end to end:
 | **g. Deploy** | `agents.deploy` → endpoint `agents_<catalog>-<schema>-<AGENT_NAME>` (15–25 min to become READY) |
 
 You can also open the notebook in the workspace and run it interactively.
+
+---
+
+#### LLM via a Unity AI Gateway model service
+
+`agent_src/setup_ai_gateway.py` (first task of the `agent_eval` job) creates the model service `<catalog>.<schema>.weatherwise_llm`, which routes to `LLM_DESTINATION_MODEL` and logs every LLM call to the inference table `weatherwise_llm_payload`. The deployed agent calls it as a dedicated service principal, because Model Serving's automatic auth passthrough doesn't cover model services:
+
+```bash
+./scripts/setup_agent_llm_sp.sh DEFAULT   # once (workspace admin): SP + secret scope weatherwise-agent; --rotate to mint a new secret
+```
+
+The notebook passes `LLM_HOST` and `LLM_CLIENT_ID`/`LLM_CLIENT_SECRET` as `{{secrets/weatherwise-agent/...}}` references; `setup_ai_gateway` grants the SP `EXECUTE` on the service. The agent's tools keep automatic auth passthrough via the declared resources, so **no PAT is stored on the endpoint**. LLM calls attach a fresh OAuth token per request.
+
+#### MLflow traces in Unity Catalog
+
+The notebook uses the experiment named by `MLFLOW_EXPERIMENT` (under `/Users/<you>/`). Notebook runs **and** the served endpoint (via `MLFLOW_EXPERIMENT_ID`) log traces there, and `mlflow.tracing.archival.enable_databricks_trace_archival(...)` copies them into **one** Delta table:
+
+| Table | Contents |
+|---|---|
+| `<catalog>.<schema>.weatherwise_traces` | Agent traces from the experiment (archived periodically, so new traces appear after a short delay) |
+| `<catalog>.<schema>.weatherwise_payload` | Serving endpoint inference table: raw request/response payloads (endpoint AI Gateway config, not traces) |
+
+Override the table with `TRACE_TABLE` (full name) in `.env`.
 
 ---
 

@@ -1,7 +1,7 @@
 -- ============================================================
 -- WeatherWise · Shipment Risk Metric View
 -- ============================================================
--- Governed cold-chain KPIs for the WeatherWise agent, Genie and
+-- Governed temperature-controlled KPIs for the WeatherWise agent, Genie and
 -- AI/BI dashboards. Business definitions live in the companion
 -- Genie Ontology page: uc_semantics/page_cold_chain_shipment_risk.md
 --
@@ -17,16 +17,14 @@ LANGUAGE YAML
 AS $$
 version: 1.1
 comment: >-
-  Cold-chain shipment risk KPIs for MedTech implant and device shipments.
-  One row in the source = one shipment. Joins the next-day weather forecast
-  for the destination city and the supplier.
-  See the "Cold-Chain Shipment Risk" Genie Ontology page for definitions.
+  Temperature-controlled shipment risk KPIs for temperature-sensitive MedTech shipments (frozen, refrigerated and
+  room-temperature products). One row in the source = one shipment, carrying its own temperature_min_f and
+  temperature_max_f. Joins the supplier.
+  Weather risk is not stored: the WeatherWise agent computes it from live forecasts.
+  See the "Temperature-Controlled Shipment Risk" Genie Ontology page for definitions.
 source: __CATALOG__.__SCHEMA__.shipments
 
 joins:
-  - name: dim_weather
-    source: __CATALOG__.__SCHEMA__.weather_forecast
-    'on': source.destination = concat(dim_weather.city, ', ', dim_weather.state)
   - name: dim_supplier
     source: __CATALOG__.__SCHEMA__.suppliers
     'on': source.supplier_id = dim_supplier.supplier_id
@@ -39,7 +37,7 @@ dimensions:
     synonyms: [status, shipment state, delivery status]
   - name: Is Active
     expr: source.status <> 'Delivered'
-    comment: "TRUE when the shipment has not yet been delivered (still exposed to weather risk)."
+    comment: "TRUE when the shipment has not yet been delivered."
     synonyms: [active, open shipment, in flight, not delivered]
   - name: Priority
     expr: source.priority
@@ -82,25 +80,6 @@ dimensions:
     format:
       type: date
       date_format: year_month_day
-
-  # ── Weather (destination, next-day forecast) ────────────────
-  - name: Forecast Conditions
-    expr: dim_weather.conditions
-    synonyms: [weather, forecast]
-  - name: Weather Alert
-    expr: dim_weather.weather_alert
-    synonyms: [advisory, weather warning]
-  - name: Weather Risk Band
-    expr: |
-      CASE
-        WHEN dim_weather.high_f IS NULL THEN 'No Forecast'
-        WHEN dim_weather.high_f - source.temperature_max_f >= 15 THEN 'Severe (>=15F over max)'
-        WHEN dim_weather.high_f - source.temperature_max_f > 0 THEN 'Elevated (1-14F over max)'
-        WHEN source.temperature_min_f > dim_weather.low_f THEN 'Cold Exposure (below min)'
-        ELSE 'Within Range'
-      END
-    comment: "Forecast high/low at destination vs. the shipment's allowed temperature range."
-    synonyms: [risk level, weather risk, heat risk, risk tier]
 
   # ── Supplier & facility ─────────────────────────────────────
   - name: Supplier
@@ -145,12 +124,12 @@ measures:
     synonyms: [average delay, mean delay]
     format: {type: number, decimal_places: {type: max, places: 1}}
 
-  # ── Cold-chain integrity ────────────────────────────────────
+  # ── Temperature integrity ────────────────────────────────────
   - name: Temperature Excursions
     expr: |
       COUNT(1) FILTER (WHERE source.last_recorded_temp_f > source.temperature_max_f
                           OR source.last_recorded_temp_f < source.temperature_min_f)
-    comment: "Shipments whose last recorded payload temperature is outside the allowed range."
+    comment: "Shipments whose last recorded payload temperature is outside their own range: above temperature_max_f (heat, thaw or warming) or below temperature_min_f (freeze)."
     synonyms: [excursions, out of spec, temp breaches, cold chain breaches]
     format: {type: number, decimal_places: {type: exact, places: 0}}
   - name: Excursion Rate
@@ -158,41 +137,24 @@ measures:
     synonyms: [percent out of spec, breach rate]
     format: {type: percentage, decimal_places: {type: max, places: 1}}
 
-  # ── Weather risk ────────────────────────────────────────────
-  - name: Weather At-Risk Shipments
-    expr: |
-      COUNT(1) FILTER (WHERE source.status <> 'Delivered'
-                          AND dim_weather.high_f > source.temperature_max_f)
-    comment: "Active shipments whose destination forecast high exceeds the shipment's max allowed temperature."
-    synonyms: [at risk shipments, heat risk shipments, weather risk]
-    format: {type: number, decimal_places: {type: exact, places: 0}}
-  - name: STAT At-Risk Shipments
-    expr: |
-      COUNT(1) FILTER (WHERE source.status <> 'Delivered'
-                          AND source.priority = 'STAT'
-                          AND dim_weather.high_f > source.temperature_max_f)
-    comment: "Weather At-Risk Shipments with STAT priority. These go to immediate escalation."
-    synonyms: [critical at risk, stat risk, escalations needed]
-    format: {type: number, decimal_places: {type: exact, places: 0}}
+  # ── Procedure risk ──────────────────────────────────────────
   - name: Procedures at Risk
     expr: |
       COUNT(DISTINCT source.shipment_id) FILTER (
         WHERE source.status <> 'Delivered'
-          AND dim_weather.high_f > source.temperature_max_f
-          AND DATEDIFF(source.procedure_date, source.eta_date) <= 1)
-    comment: "At-risk shipments arriving within 1 day of (or after) the scheduled procedure, leaving no buffer to re-ship."
-    synonyms: [surgeries at risk, cases at risk, procedure risk]
+          AND source.eta_date > source.procedure_date)
+    comment: "Active shipments whose ETA is after the scheduled procedure date (same rule as the app's Network Map and Genie)."
+    synonyms: [surgeries at risk, cases at risk, procedure risk, late for surgery]
     format: {type: number, decimal_places: {type: exact, places: 0}}
-  - name: Weather Risk Rate
-    expr: MEASURE(`Weather At-Risk Shipments`) / NULLIF(MEASURE(`Active Shipments`), 0)
-    comment: "Weather At-Risk Shipments / Active Shipments."
-    synonyms: [percent at risk]
-    format: {type: percentage, decimal_places: {type: max, places: 1}}
-  - name: Avg Forecast Temp Gap F
-    expr: AVG(dim_weather.high_f - source.temperature_max_f)
-    comment: "Average degrees F the destination forecast high sits above (+) or below (-) the shipment max. Same logic as the temp_gap UC function."
-    synonyms: [temperature gap, temp gap, degrees over max]
-    format: {type: number, decimal_places: {type: max, places: 1}}
+  - name: STAT Procedures at Risk
+    expr: |
+      COUNT(DISTINCT source.shipment_id) FILTER (
+        WHERE source.status <> 'Delivered'
+          AND source.priority = 'STAT'
+          AND source.eta_date > source.procedure_date)
+    comment: "Procedures at Risk with STAT priority (needed for a scheduled procedure). These go to immediate escalation."
+    synonyms: [critical at risk, stat risk, escalations needed]
+    format: {type: number, decimal_places: {type: exact, places: 0}}
 
   # ── Distance ────────────────────────────────────────────────
   - name: Avg Route Miles

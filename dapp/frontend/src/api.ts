@@ -6,6 +6,8 @@ export type Health = {
   agent_configured: boolean;
   temp_ceiling_f: number;
   user: string | null;
+  /** Genie One / Genie space link for the header button (null hides it). */
+  genie_one_url?: string | null;
 };
 
 export type Overview = {
@@ -45,7 +47,35 @@ export type GenieResult = {
 };
 
 /** One agent tool call, as returned by /api/agent/chat (args/output truncated server-side). */
-export type ToolStep = { name: string; args: string; output: string | null };
+export type ToolStep = { id?: string; name: string; args: string; output: string | null; rows?: number; startedAt?: number; endedAt?: number };
+
+export type AgentEvent =
+  | { type: "call"; id: string; name: string; args: string }
+  | { type: "output"; id: string; output: string; rows?: number }
+  | { type: "text"; text: string }
+  | { type: "error"; detail: string }
+  | { type: "done" };
+
+/** POST and read an NDJSON stream, calling onEvent for each line as it arrives. */
+export async function streamNDJSON(url: string, body: unknown, onEvent: (e: AgentEvent) => void): Promise<void> {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!res.ok || !res.body) throw new Error(await errorText(res));
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (line) onEvent(JSON.parse(line) as AgentEvent);
+    }
+  }
+  if (buf.trim()) onEvent(JSON.parse(buf) as AgentEvent);
+}
 
 export type ChatMessage = { role: "user" | "assistant"; content: string; steps?: ToolStep[] };
 
@@ -75,9 +105,8 @@ export async function postJSON<T>(url: string, body: unknown): Promise<T> {
 }
 
 // ── Network Map (/api/map) ───────────────────────────────────
-type Forecast = { forecast_high_f: number | null; forecast_low_f: number | null; weather_alert: string | null };
 
-export type MapSite = Forecast & {
+export type MapSite = {
   site_id: string;
   site_name: string;
   site_type: "Supply Center" | "Distribution Center";
@@ -91,7 +120,7 @@ export type MapSite = Forecast & {
   routed_shipments: number;
 };
 
-export type MapFacility = Forecast & {
+export type MapFacility = {
   facility_id: string;
   facility_name: string;
   facility_type: "Hospital" | "Clinic";

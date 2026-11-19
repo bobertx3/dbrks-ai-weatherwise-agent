@@ -1,5 +1,8 @@
 fastapi>=0.115.0
 uvicorn>=0.30.0
-databricks-sdk>=0.74.0
+databricks-sdk>=0.81.0
 mlflow>=3.0.0
 pydantic>=2.0.0
+# Lakebase read path (dapp/app.py): SQLAlchemy pool + psycopg 3 driver. Not pre-installed in the app runtime.
+sqlalchemy>=2.0
+psycopg[binary]>=3.1

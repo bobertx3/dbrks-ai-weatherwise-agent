@@ -17,7 +17,9 @@ TARGET_SCHEMA="agentbricks_weatherwise"
 ## Additional configs
 DATABRICKS_HOST="https://fevm-bobertx3-aws-fevm.cloud.databricks.com"
 DATABRICKS_TOKEN=""
-AI_GATEWAY_MODEL="system.ai.gpt-5-6-sol"
+AI_GATEWAY_MODEL="bldemos.agentbricks_weatherwise.weatherwise_llm"
+LLM_DESTINATION_MODEL="system.ai.databricks-gpt-5-6-sol"
+AGENT_LLM_SECRET_SCOPE="weatherwise-agent"
 AI_GATEWAY_BASE_URL="https://fevm-bobertx3-aws-fevm.cloud.databricks.com/ai-gateway/mlflow/v1"
 # LLM_ENDPOINT_NAME is only used when AI_GATEWAY_MODEL is empty.
 # LLM_ENDPOINT_NAME="databricks-gpt-5-5"

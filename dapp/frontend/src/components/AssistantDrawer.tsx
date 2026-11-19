@@ -16,6 +16,7 @@ export default function AssistantDrawer({
   onClose,
   agentEnabled,
   genieEnabled,
+  pending,
 }: {
   open: boolean;
   tab: AssistTab;
@@ -23,6 +24,7 @@ export default function AssistantDrawer({
   onClose: () => void;
   agentEnabled: boolean;
   genieEnabled: boolean;
+  pending?: { id: number; text: string } | null;
 }) {
   return (
     <aside className={`assist ${open ? "open" : ""} tab-${tab}`} aria-hidden={!open}>
@@ -40,7 +42,7 @@ export default function AssistantDrawer({
         </button>
       </div>
       <div className={`assist-panel ${tab === "agent" ? "" : "hidden"}`}>
-        <AgentChat enabled={agentEnabled} />
+        <AgentChat enabled={agentEnabled} pending={pending} />
       </div>
       <div className={`assist-panel ${tab === "genie" ? "" : "hidden"}`}>
         <GeniePanel enabled={genieEnabled} />

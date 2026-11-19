@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Bot, LayoutDashboard, Map as MapIcon, Network, Workflow } from "lucide-react";
+import { BookOpen, Bot, ExternalLink, Network, Sparkles, Workflow } from "lucide-react";
 import { getJSON, type Health } from "./api";
-import Dashboard from "./components/Dashboard";
+import CommandCenter from "./components/CommandCenter";
 import AssistantDrawer, { type AssistTab } from "./components/AssistantDrawer";
-import NetworkMap from "./components/NetworkMap";
 import { DataFlowModal, OutcomeMapModal, ProblemSolutionModal } from "./components/Modals";
 
 type ModalKey = "ps" | "om" | "flow" | null;
-type Page = "command" | "map";
 
 export default function App() {
   const [health, setHealth] = useState<Health | null>(null);
@@ -15,7 +13,7 @@ export default function App() {
   const [modal, setModal] = useState<ModalKey>(null);
   const [assistOpen, setAssistOpen] = useState(false);
   const [assistTab, setAssistTab] = useState<AssistTab>("agent");
-  const [page, setPage] = useState<Page>("command");
+  const [pending, setPending] = useState<{ id: number; text: string } | null>(null);
 
   useEffect(() => {
     getJSON<Health>("/api/health")
@@ -37,17 +35,9 @@ export default function App() {
           <h1>
             MedTech <span className="coral">Weatherwise</span> Agent <span className="tagline">- Intelligent Supply Chain</span>
           </h1>
-          <p>Cold-chain escalation for surgical supplies. Protect every temperature-controlled shipment in transit.</p>
+          <p>Temperature-controlled logistics for surgical supplies. Protect every shipment in transit and escalate before it spoils.</p>
         </div>
         <div className="actions">
-          <div className="page-tabs">
-            <button className={page === "command" ? "on" : ""} onClick={() => setPage("command")}>
-              <LayoutDashboard size={13} /> Command Center
-            </button>
-            <button className={page === "map" ? "on" : ""} onClick={() => setPage("map")}>
-              <MapIcon size={13} /> Network Map
-            </button>
-          </div>
           <button className="btn" onClick={() => setModal("ps")}>
             <BookOpen size={13} /> Problem &amp; Solution
           </button>
@@ -57,6 +47,11 @@ export default function App() {
           <button className="btn" onClick={() => setModal("flow")}>
             <Workflow size={13} /> Data Flow
           </button>
+          {health?.genie_one_url && (
+            <a className="btn genie" href={health.genie_one_url} target="_blank" rel="noopener noreferrer" title="Open Genie One in Databricks (new tab)">
+              <Sparkles size={13} /> Genie One <ExternalLink size={11} />
+            </a>
+          )}
           <button className={`btn coral-solid ${assistOpen ? "active" : ""}`} onClick={() => setAssistOpen((o) => !o)}>
             <Bot size={13} /> Ask WeatherWise
           </button>
@@ -67,15 +62,17 @@ export default function App() {
 
       <div className="body-row">
       <div className="stage">
-        {page === "command" ? (
-          <main className="command">
-            <Dashboard catalog={health?.catalog ?? ""} warehouseOk={health ? health.warehouse_configured : null} />
-          </main>
-        ) : (
-          <main className="map-main">
-            <NetworkMap warehouseOk={health ? health.warehouse_configured : null} />
-          </main>
-        )}
+        <main className="command">
+          <CommandCenter
+            catalog={health?.catalog ?? ""}
+            warehouseOk={health ? health.warehouse_configured : null}
+            onAsk={(text) => {
+              setAssistTab("agent");
+              setAssistOpen(true);
+              setPending({ id: Date.now(), text });
+            }}
+          />
+        </main>
       </div>
       <AssistantDrawer
         open={assistOpen}
@@ -84,6 +81,7 @@ export default function App() {
         onClose={() => setAssistOpen(false)}
         agentEnabled={agentOn}
         genieEnabled={genieOn}
+        pending={pending}
       />
       </div>
 

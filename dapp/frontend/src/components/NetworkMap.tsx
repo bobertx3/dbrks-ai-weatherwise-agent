@@ -81,8 +81,25 @@ function FlyTo({ target }: { target: LatLngExpression | null }) {
   return null;
 }
 
-export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | null }) {
-  const [data, setData] = useState<MapData | null>(null);
+export default function NetworkMap({
+  warehouseOk,
+  data: dataProp,
+  statusFilter = null,
+  focus = null,
+  embedded = false,
+}: {
+  warehouseOk: boolean | null;
+  /** Provide data from a parent (Command Center) to skip this component's own fetch. */
+  data?: MapData | null;
+  /** Show only routes with this status (Command Center status chips). */
+  statusFilter?: string | null;
+  /** Shipment picked in the table: select it and fly to its destination. */
+  focus?: MapRoute | null;
+  /** Embedded in the Command Center: fixed height, no duplicate KPI tiles. */
+  embedded?: boolean;
+}) {
+  const [ownData, setData] = useState<MapData | null>(null);
+  const data = dataProp !== undefined ? dataProp : ownData;
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState("us");
   const [layers, setLayers] = useState<Layers>({ supply: true, dc: true, hospital: true, clinic: true, routes: "risk" });
@@ -90,16 +107,25 @@ export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | nul
   const [flyTarget, setFlyTarget] = useState<LatLngExpression | null>(null);
 
   useEffect(() => {
-    if (warehouseOk === null) return;
+    if (warehouseOk === null || dataProp !== undefined) return;
     getJSON<MapData>("/api/map")
       .then(setData)
       .catch((e: Error) => setError(e.message));
-  }, [warehouseOk]);
+  }, [warehouseOk, dataProp]);
+
+  useEffect(() => {
+    if (!focus) return;
+    setSelected({ kind: "route", item: focus });
+    setFlyTarget([focus.destination_latitude, focus.destination_longitude]);
+  }, [focus]);
 
   const routes = useMemo(() => {
-    if (!data || layers.routes === "off") return [];
+    if (!data) return [];
+    if (statusFilter) return data.routes.filter((r) => r.status === statusFilter);
+    if (layers.routes === "off") return [];
     return layers.routes === "all" ? data.routes : data.routes.filter(isRisk);
-  }, [data, layers.routes]);
+  }, [data, layers.routes, statusFilter]);
+  const selectedRouteId = selected?.kind === "route" ? selected.item.shipment_id : null;
 
   const facilityById = useMemo(
     () => Object.fromEntries((data?.facilities ?? []).map((f) => [f.facility_id, f])),
@@ -118,7 +144,7 @@ export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | nul
   const s = data?.summary;
 
   return (
-    <div className="netmap">
+    <div className={`netmap ${embedded ? "embedded" : ""}`}>
       <aside className="netmap-side">
         <div>
           <div className="lbl teal">NETWORK MAP</div>
@@ -127,6 +153,7 @@ export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | nul
 
         {error && <div className="notice">Map data unavailable: {error}</div>}
 
+        {!embedded && (
         <div className="netmap-kpis">
           <MiniKpi icon={<Warehouse size={13} />} label="Supply centers" value={s?.supply_centers} tone="teal" />
           <MiniKpi icon={<Building2 size={13} />} label="Distribution" value={s?.distribution_centers} tone="blue" />
@@ -135,6 +162,7 @@ export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | nul
           <MiniKpi icon={<Truck size={13} />} label="Delayed" value={s?.delayed} tone="amber" />
           <MiniKpi icon={<Thermometer size={13} />} label="Excursions" value={s?.excursions} tone="coral" />
         </div>
+        )}
 
         <div className="card tight">
           <div className="lbl">VIEW</div>
@@ -155,6 +183,7 @@ export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | nul
           </div>
 
           <div className="lbl" style={{ marginTop: 12 }}>SHIPMENT ROUTES</div>
+          {statusFilter && <div className="muted" style={{ fontSize: 11.5, margin: "4px 0 6px" }}>Showing {statusFilter} routes (status chip)</div>}
           <div className="seg">
             {(["off", "risk", "all"] as const).map((k) => (
               <button key={k} className={layers.routes === k ? "on" : ""} onClick={() => setLayers((l) => ({ ...l, routes: k }))}>
@@ -193,7 +222,7 @@ export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | nul
                   >
                     <div className="hl-top">
                       <span className="mono">{r.shipment_id}</span>
-                      <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`}>{r.priority}</span>
+                      <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: needed for a scheduled procedure, ship immediately" : undefined}>{r.priority}</span>
                     </div>
                     <div className="hl-main">{r.product_name} → {facilityById[r.destination_facility_id]?.facility_name ?? r.destination}</div>
                     <div className="hl-sub">
@@ -229,8 +258,8 @@ export default function NetworkMap({ warehouseOk }: { warehouseOk: boolean | nul
               positions={[[r.origin_latitude, r.origin_longitude], [r.destination_latitude, r.destination_longitude]]}
               pathOptions={{
                 color: routeColor(r),
-                weight: isRisk(r) ? 2.2 : 1.2,
-                opacity: isRisk(r) ? 0.8 : 0.35,
+                weight: r.shipment_id === selectedRouteId ? 4.5 : isRisk(r) ? 2.2 : 1.2,
+                opacity: r.shipment_id === selectedRouteId ? 1 : isRisk(r) ? 0.8 : 0.35,
                 dashArray: r.status === "Delayed" ? "6 6" : undefined,
               }}
               eventHandlers={{ click: () => setSelected({ kind: "route", item: r }) }}
@@ -331,8 +360,6 @@ function Details({ sel, facilityById, onClose }: { sel: NonNullable<Selected>; f
           <Row k="Location" v={`${sel.item.city}, ${sel.item.state}`} />
           <Row k="On hand" v={`${nf.format(sel.item.on_hand_units)} units`} />
           <Row k="Active routes via site" v={sel.item.routed_shipments} />
-          <Row k="Tomorrow" v={sel.item.forecast_high_f != null ? `${sel.item.forecast_high_f}° / ${sel.item.forecast_low_f}°F` : "—"} />
-          {sel.item.weather_alert && <Row k="Alert" v={sel.item.weather_alert} tone="amber" />}
           <Row k="Products" v={sel.item.products.join(", ")} />
           {sel.item.low_stock_products.length > 0 && <Row k="Low stock (≤4)" v={sel.item.low_stock_products.join(", ")} tone="coral" />}
         </>
@@ -349,8 +376,6 @@ function Details({ sel, facilityById, onClose }: { sel: NonNullable<Selected>; f
           <Row k="Delayed" v={sel.item.delayed} tone={sel.item.delayed ? "amber" : undefined} />
           <Row k="Temp excursions" v={sel.item.excursions} tone={sel.item.excursions ? "coral" : undefined} />
           <Row k="Surgeries at risk" v={sel.item.procedures_at_risk} tone={sel.item.procedures_at_risk ? "coral" : undefined} />
-          <Row k="Tomorrow" v={sel.item.forecast_high_f != null ? `${sel.item.forecast_high_f}° / ${sel.item.forecast_low_f}°F` : "—"} />
-          {sel.item.weather_alert && <Row k="Alert" v={sel.item.weather_alert} tone="amber" />}
         </>
       )}
       {sel.kind === "route" && (

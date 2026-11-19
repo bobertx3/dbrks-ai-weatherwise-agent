@@ -1,4 +1,4 @@
-import os, re, requests
+import os, re, requests, html as _html
 from langchain_core.tools import tool
 from typing import Optional
 
@@ -9,8 +9,10 @@ SENDER          = os.environ.get("SENDER")
 RECIPIENT_ENV   = os.environ.get("RECIPIENT")
 AGENT_NAME   = os.environ.get("AGENT_NAME")
 
-# ── Styles ────────────────────────────────────────────────
-BG, INK, RED, BLUE, DIV = "#f5f7fb", "#222", "#e24a4a", "#1e63c6", "#e6edf6"
+# ── Styles (mirror the app: navy page, teal + coral accents) ──
+PAGE, PANEL, INK, SOFT, TEAL, CORAL, LINE = "#0a1017", "#ffffff", "#1b2733", "#5b6f82", "#2bb3a8", "#f2725e", "#e3e9ef"
+FROM_NAME = os.environ.get("EMAIL_FROM_NAME", "WeatherWise Agent")
+FONT = "-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif"
 
 def _as_list(value: Optional[str]):
     """Split comma/semicolon-separated recipients into a clean list."""
@@ -46,22 +48,27 @@ def send_email(recipient: Optional[str] = None, subject: str = "", message: str 
         # --- plain text + html
         text = re.sub(r"<[^>]+>", "", message.replace("<br/>", "\n").replace("<br>", "\n"))
         html = f"""
-        <html><body style='margin:0;padding:0;background:{BG};'>
-        <table width='100%' style='background:{BG};'><tr><td align='center' style='padding:24px;'>
-        <table width='640' style='max-width:640px;background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);'>
-        <tr><td style='padding:28px 26px;font-family:Segoe UI,Roboto,Arial,sans-serif;color:{INK};font-size:16px;'>
-        <div style='font-size:34px;font-weight:800;color:{RED};'>Jackson &amp; Jackson</div>
-        <div style='display:inline-block;background:{BLUE};color:#fff;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;margin:6px 0 14px 0;'>UPDATE</div>
-        <hr style='border:none;border-top:1px solid {DIV};margin:10px 0 18px 0;'>
-        <div>{message}</div>
-        <hr style='border:none;border-top:1px solid {DIV};margin:24px 0 12px 0;'>
-        <p style='font-size:12px;color:#667;text-align:center;'>© Jackson &amp; Jackson •
-        <a href='mailto:{SENDER}' style='color:{BLUE};text-decoration:none;'>{SENDER}</a></p>
-        </td></tr></table></td></tr></table></body></html>""".strip()
+        <html><body style='margin:0;padding:0;background:#eef2f6;'>
+        <table width='100%' cellpadding='0' cellspacing='0' style='background:#eef2f6;'><tr><td align='center' style='padding:24px 12px;'>
+        <table width='640' cellpadding='0' cellspacing='0' style='max-width:640px;width:100%;border-radius:12px;overflow:hidden;border:1px solid {LINE};'>
+        <tr><td style='background:{PAGE};padding:16px 22px;font-family:{FONT};'>
+          <span style='display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:7px;background:{CORAL};color:{PAGE};font-weight:800;font-size:14px;vertical-align:middle;'>W</span>
+          <span style='color:#dbe4ec;font-size:15px;font-weight:700;vertical-align:middle;margin-left:8px;'>MedTech WeatherWise Agent</span>
+          <span style='float:right;margin-top:3px;color:{CORAL};border:1px solid {CORAL};border-radius:999px;padding:2px 9px;font-size:10px;font-weight:700;letter-spacing:.12em;'>ESCALATION</span>
+          <div style='height:2px;background:{TEAL};margin-top:14px;width:48px;border-radius:2px;'></div>
+        </td></tr>
+        <tr><td style='background:{PANEL};padding:22px 24px;font-family:{FONT};color:{INK};font-size:15px;line-height:1.55;'>
+          <div style='font-size:18px;font-weight:700;margin:0 0 12px 0;'>{_html.escape(subject)}</div>
+          <div>{message}</div>
+        </td></tr>
+        <tr><td style='background:#f7f9fb;border-top:1px solid {LINE};padding:12px 24px;font-family:{FONT};font-size:11.5px;color:{SOFT};'>
+          Sent by the WeatherWise agent · Temperature-controlled logistics · Synthetic demo data
+        </td></tr>
+        </table></td></tr></table></body></html>""".strip()
 
         # --- send
         data = {
-            "from": f"{AGENT_NAME}<{SENDER}>",
+            "from": f"{FROM_NAME} <{SENDER}>",
             "to": to_list,
             "subject": subject,
             "text": text,

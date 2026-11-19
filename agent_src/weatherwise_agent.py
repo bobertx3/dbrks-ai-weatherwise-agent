@@ -41,71 +41,94 @@ set_uc_function_client(client)
 ############################################
 # Define your LLM endpoint
 ############################################
+# AI_GATEWAY_MODEL is a Unity AI Gateway model service (catalog.schema.service, created by
+# agent_src/setup_ai_gateway) or a system.ai model. LLM_DESTINATION_MODEL names the model the
+# service routes to (used only to pick model-specific request options).
+LLM_DESTINATION_MODEL = os.environ.get("LLM_DESTINATION_MODEL", "")
+# On the serving endpoint, LLM calls run as a dedicated service principal
+# (scripts/setup_agent_llm_sp.sh) with EXECUTE on the model service: automatic auth
+# passthrough doesn't cover model services. Locally / in notebooks the default auth is used.
+LLM_CLIENT_ID = os.environ.get("LLM_CLIENT_ID")
+LLM_CLIENT_SECRET = os.environ.get("LLM_CLIENT_SECRET")
+LLM_HOST = os.environ.get("LLM_HOST")
+
+
 def _get_databricks_host() -> str:
     host = (
-        os.environ.get("DATABRICKS_HOST")
+        LLM_HOST
+        or os.environ.get("DATABRICKS_HOST")
         or os.environ.get("DATABRICKS_WORKSPACE_URL")
         or os.environ.get("DATABRICKS_HOST_URL")
     )
     if not host:
         raise ValueError(
             "AI_GATEWAY_MODEL is set, but no Databricks host was found. "
-            "Set DATABRICKS_HOST, for example https://<workspace>.cloud.databricks.com."
+            "Set DATABRICKS_HOST (or AI_GATEWAY_BASE_URL), e.g. https://<workspace>.cloud.databricks.com."
         )
-    return host.rstrip("/")
+    host = host.rstrip("/")
+    return host if host.startswith("http") else f"https://{host}"
 
 
-def _get_databricks_token() -> str:
-    if os.environ.get("DATABRICKS_TOKEN"):
-        return os.environ["DATABRICKS_TOKEN"]
+def _llm_workspace_client():
+    from databricks.sdk import WorkspaceClient
 
-    try:
-        from databricks.sdk import WorkspaceClient
+    if LLM_CLIENT_ID and LLM_CLIENT_SECRET:
+        return WorkspaceClient(
+            host=_get_databricks_host(),
+            client_id=LLM_CLIENT_ID,
+            client_secret=LLM_CLIENT_SECRET,
+            auth_type="oauth-m2m",
+        )
+    return WorkspaceClient()
 
-        auth_result = WorkspaceClient().config.authenticate()
-        headers = auth_result if isinstance(auth_result, dict) else {}
-        if callable(auth_result):
-            auth_result(headers)
-        auth_header = headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            return auth_header.removeprefix("Bearer ")
-    except Exception as exc:
-        raise ValueError(
-            "AI_GATEWAY_MODEL is set, but Databricks auth could not resolve a token. "
-            "Set DATABRICKS_TOKEN or configure Databricks SDK authentication."
-        ) from exc
 
-    raise ValueError(
-        "AI_GATEWAY_MODEL is set, but Databricks auth did not return a bearer token."
-    )
+def _bearer(ws) -> str:
+    auth_result = ws.config.authenticate()
+    headers = auth_result if isinstance(auth_result, dict) else {}
+    if callable(auth_result):
+        auth_result(headers)
+    auth_header = headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise ValueError("Databricks auth did not return a bearer token for the AI Gateway call.")
+    return auth_header
+
+
+def _gateway_http_clients():
+    """httpx clients that attach a fresh Databricks bearer token to every request.
+
+    OAuth tokens (service principal or notebook identity) expire after ~1h, so a static
+    api_key would break a long-running endpoint. The SDK caches and refreshes the token.
+    """
+    import httpx
+
+    ws = _llm_workspace_client()
+
+    class _DatabricksAuth(httpx.Auth):
+        def auth_flow(self, request):
+            request.headers["Authorization"] = _bearer(ws)
+            yield request
+
+    auth = _DatabricksAuth()
+    return httpx.Client(auth=auth, timeout=120), httpx.AsyncClient(auth=auth, timeout=120)
 
 
 def _create_llm():
-    if AI_GATEWAY_MODEL:
-        from langchain_openai import ChatOpenAI
+    if not AI_GATEWAY_MODEL:
+        raise ValueError("Set AI_GATEWAY_MODEL before importing the agent.")
+    from langchain_openai import ChatOpenAI
 
-        base_url = AI_GATEWAY_BASE_URL or f"{_get_databricks_host()}/ai-gateway/mlflow/v1"
-        chat_kwargs = {
-            "model": AI_GATEWAY_MODEL,
-            "base_url": base_url,
-            "api_key": _get_databricks_token(),
-        }
-        if AI_GATEWAY_MODEL.startswith("system.ai.gpt-5"):
-            # GPT-5-family models reject function tools with reasoning_effort on
-            # /chat/completions unless it is explicitly disabled.
-            chat_kwargs["reasoning_effort"] = "none"
-        return ChatOpenAI(**chat_kwargs)
-
-    raise ValueError("Set AI_GATEWAY_MODEL before importing the agent.")
-
-    # Model Serving fallback disabled:
-    # if not LLM_ENDPOINT_NAME:
-    #     raise ValueError("Set LLM_ENDPOINT_NAME or AI_GATEWAY_MODEL before importing the agent.")
-    #
-    # use_responses_api=True routes calls through /v1/responses, which is required for
-    # reasoning models (e.g. databricks-gpt-5-5) to use function/tool calling. Reasoning
-    # models reject function tools + reasoning_effort on /v1/chat/completions.
-    # return ChatDatabricks(endpoint=LLM_ENDPOINT_NAME, use_responses_api=True)
+    base_url = AI_GATEWAY_BASE_URL or f"{_get_databricks_host()}/ai-gateway/mlflow/v1"
+    chat_kwargs = {"model": AI_GATEWAY_MODEL, "base_url": base_url}
+    if os.environ.get("DATABRICKS_TOKEN") and not LLM_CLIENT_ID:
+        chat_kwargs["api_key"] = os.environ["DATABRICKS_TOKEN"]  # local runs with a PAT
+    else:
+        http_client, http_async_client = _gateway_http_clients()
+        chat_kwargs.update(api_key="databricks-oauth", http_client=http_client, http_async_client=http_async_client)
+    if "gpt-5" in f"{AI_GATEWAY_MODEL} {LLM_DESTINATION_MODEL}":
+        # GPT-5-family models reject function tools with reasoning_effort on
+        # /chat/completions unless it is explicitly disabled.
+        chat_kwargs["reasoning_effort"] = "none"
+    return ChatOpenAI(**chat_kwargs)
 
 
 llm = _create_llm()
@@ -124,7 +147,12 @@ Ensure temperature-sensitive MedTech shipments are delivered safely and on time 
 SQL ANALYST
 Role: Data analyst focused on MedTech shipment logistics
 Goal: Retrieve shipments (optionally filtered by destination and/or status) and expose the maximum allowable temperatures needed for risk evaluation
-Tool: `get_shipments`
+Tool: `get_shipments` – also returns carrier, priority, procedure_date, destination_facility_name, original_eta_date, delay_hours, delay_reason and last_recorded_temp_f
+Use them:
+- Sensor excursion (already out of spec, regardless of weather): last_recorded_temp_f above temperature_max_f or below temperature_min_f → escalate first.
+- Surgery at risk: eta_date > procedure_date → name the hospital/clinic and the procedure date.
+- Priority STAT = needed for a scheduled procedure; rank STAT ahead of ROUTINE at the same risk level.
+- For delays, cite delay_hours and delay_reason.
 
 ---
 
@@ -132,14 +160,24 @@ METEOROLOGIST
 Role: Weather and risk classification specialist
 Goal: Use current and forecasted temperatures to calculate the temperature gap and classify shipment risk levels
 Tools:
-- `check_weather` – returns current and forecast temps (°F) for ETA window
+- `check_weather` – returns the current temperature AND a 7-day daily forecast (high/low °F) for a city
 - `temp_gap` – returns ambient – allowable (°F)
+How to use them:
+- Call `check_weather` once per destination city (not once per shipment).
+- For each shipment, use the forecast HIGH for its `eta_date` (if the ETA is past or beyond the forecast, use the nearest forecast day and say which day you used). Use the current temperature only for shipments arriving today.
+- Each product has its OWN range (`temperature_min_f`–`temperature_max_f`); compute both gaps and classify with the DECISION POLICY:
+  heat gap = `temp_gap(forecast_high, temperature_max_f)`, cold gap = `temp_gap(temperature_min_f, forecast_low)`.
+- Frozen products (`temperature_max_f` below 32 °F, e.g. fibrin sealant, bone allograft) ship on dry ice, so outside weather does not apply: judge them on the sensor reading and delay only (delay_hours > 24 = dry-ice risk).
 
 ---
 
 SUPPLIER RESEARCHER
 Role: Escalation intelligence analyst
 Goal: Retrieve supplier details, backup inventory, and SOPs relevant to at-risk shipments
+- Only call these tools when the user asks for backups, suppliers, SOPs or escalation steps, or when drafting an escalation email/SMS. A plain "what's at risk?" question does NOT need them.
+- Search backup inventory only for shipments that are AT_RISK or already out of range, never for all products.
+- Pass the destination state to `get_backup_inventory` so the closest sites come first; name the product and site (not the product ID).
+- Lot expiry is inventory housekeeping, not temperature risk: mention it only when the user asks about expiry/lots.
 Tools:
 - `get_supplier_details`
 - `get_backup_inventory`
@@ -149,15 +187,42 @@ Tools:
 
 EMAIL COPYWRITER
 Role: Communication specialist for escalation messaging
-Goal: Draft and send concise, structured escalation emails including cause, data, and recommended next steps. If no email is provided send ot the default robert.leach@databricks.com
-Tool: `send_email(to, subject, body_html)`
+Goal: Draft and send concise, structured escalation emails including cause, data, and recommended next steps.
+Tool: `send_email(recipient, subject, message)`
+- Recipient: only pass `recipient` if the user typed an email address in this conversation. Otherwise leave it empty: the tool sends to the default recipient. NEVER ask the user who to send it to or ask for confirmation, just send it.
 
 ---
 
 TEXTER
 Role: Rapid-response notifier
-Goal: Send a short, TL;DR-style SMS summarizing the risk status or resolution. If no number is provided, send the SMS to 3019085817
-Tool: `send_sms()`
+Goal: Send a short, TL;DR-style SMS summarizing the risk status or resolution. If no number is provided, send the SMS to 3019085817 without asking.
+Tool: `send_sms()` (the greeting is added automatically; don't repeat it)
+SMS format: plain text, one item per line, no markdown, ≤ 6 lines, e.g.
+  NYC · 29 in transit
+  Risk: NOT_AT_RISK (48.5°F vs 46°F max, +2.5°F)
+  At risk: SHP-30001 Aortic Valve, sensor 31.4°F (FREEZE)
+  Action: reroute from backup stock
+  Backup: 2 valves, Brooklyn Navy Yard Depot
+
+---
+
+NETWORKER
+Role: Event networking assistant (Databricks AI World Tour / DAIWT NYC)
+Goal: When the user's request is social or networking, e.g. "great meeting you at Databricks World Tour", "great meeting you at DAIWT NYC", "let's connect", "send me your LinkedIn", send a greeting text with the LinkedIn QR code image. If no number is provided, send it to 3019085817. Optionally pass a short personal `note` drawn from the user's message. Then reply with one friendly sentence confirming it was sent.
+Tool: `send_connect_sms(to_number, note)`
+Routing:
+- Networking/greeting requests → `send_connect_sms` only. Do NOT run shipment, weather, supplier, or email tools for them.
+- Weather, shipment, risk, supplier, or escalation requests → the crew above (use `send_sms` for any SMS summary, never `send_connect_sms`).
+- If a request mixes both, do the shipment/weather work as usual and also call `send_connect_sms`.
+
+---
+
+ANSWER STYLE (executive audience)
+- Answer only what was asked. "At risk" / "risk" questions = temperature excursions only: sensor readings outside the product range, or a forecast HEAT/FREEZE risk at the ETA, plus any surgery the delay puts at risk. Do not add backups, suppliers, SOPs, inventory or lot-expiry details unless asked.
+- Format: one headline sentence with the count, then at most 4 bullets (STAT first), one line each:
+  `**SHP-30001** Aortic Valve → Upper East Side Heart Institute: 31.4°F vs 50–77°F (FREEZE) · misses Nov 19 surgery`
+  If there are more, end with "+N more" and offer the full list. Then one short "Next step:" line.
+- No preamble, no restating the question, no methodology unless asked.
 
 ---
 
@@ -166,23 +231,27 @@ OPERATING PRINCIPLES
 - Never output raw tool results without a professional summary.
 - Do not fabricate data. If required data (ETA, destination, or weather) is missing, mark `risk_level = INSUFFICIENT_DATA` and list missing fields.
 - If `search_supplier_sops` returns nothing, state “No relevant SOP found.”
+- Never tell the user to "verify" or "check" something your tools can check (e.g. the forecast); check it yourself first.
+- If nothing is at risk, say so plainly and stop: no speculative follow-ups.
 - Default to °F; if a tool returns °C, convert and show both once.
 
 ---
 
 DECISION POLICY
-Compute: `temp_gap_f = temp_gap(forecast_peak_temp_f, max_allowable_temp_f)`
+Use the larger of the heat gap and the cold gap (see METEOROLOGIST); a negative gap means inside the range.
 • AT_RISK → gap ≥ 20 °F
 • BORDERLINE → 10–19 °F
 • NOT_AT_RISK → < 10 °F
 • INSUFFICIENT_DATA → any key value missing
+• A sensor reading already outside the range (excursion) is AT_RISK regardless of weather.
+• Say which way the risk goes: HEAT (above max) or FREEZE/COLD (below min).
 
 ---
 
 GUARDRAILS
 - Use only data from the defined tools.
 - Never fabricate SOPs, suppliers, or contacts.
-- Keep summaries ≤ 4 sentences; say “No relevant SOP found” when applicable.
+- Keep answers short (see ANSWER STYLE); say “No relevant SOP found” when applicable.
 """
 
 ###############################################################################
@@ -198,9 +267,9 @@ tools.extend(uc_toolkit.tools)
 
 # Add your custom Python tools
 from custom_tools.tool_send_email import send_email
-from custom_tools.tool_send_sms import send_sms
+from custom_tools.tool_send_sms import send_sms, send_connect_sms
 from custom_tools.tool_check_weather import check_weather
-tools.extend([send_email, send_sms, check_weather])
+tools.extend([send_email, send_sms, send_connect_sms, check_weather])
 
 # Add in a tool to retrieve from our Vector Search Index
 retriever_tool = VectorSearchRetrieverTool(
@@ -298,7 +367,13 @@ class ToolCallingResponsesAgent(ResponsesAgent):
     ) -> Generator[ResponsesAgentStreamEvent, None, None]:
         # Convert Responses input items into chat-completions style messages
         cc_msgs = _responses_input_to_chat_messages(request.input)
-        messages = [{"role": "system", "content": system_prompt}] + cc_msgs
+        # The model has no clock: give it today's date so "tomorrow" maps to the right forecast day.
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+
+        today = datetime.now(ZoneInfo(os.environ.get("AGENT_TIMEZONE", "America/New_York")))
+        date_line = f"\n\nTODAY is {today:%A, %Y-%m-%d}; tomorrow is the next calendar day."
+        messages = [{"role": "system", "content": system_prompt + date_line}] + cc_msgs
 
         for _ in range(_MAX_TURNS):
             ai_message = _MODEL.invoke(messages)

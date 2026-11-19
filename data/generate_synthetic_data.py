@@ -4,12 +4,13 @@ Generate synthetic WeatherWise demo data (deterministic, seed=42).
 Writes into this folder:
   sites.csv             supply + distribution centers (with lat/lon)
   facilities.csv        hospitals + clinics (with lat/lon and serving site)
-  inventory.csv         on-hand stock per site/product (same columns as before)
-  shipments.csv         original columns first, then new delay / geo / patient-impact columns
-  weather_forecast.csv  synthetic forecast per destination city for DEMO_DATE + 1
+  inventory.csv         on-hand stock per site/product
+  shipments.csv         temperature-sensitive MedTech shipments; each row carries its
+                        product's own allowed range (temperature_min_f / temperature_max_f)
 
-NOT touched (kept as the source of truth for products + SOPs):
-  suppliers.csv, supplier_sops.csv
+Hand-maintained (NOT written here): suppliers.csv and supplier_sops.csv.
+Keep them in sync with PRODUCTS below: one supplier_sops.csv row per product_id,
+with the same product_name / supplier_id, and SOP storage text matching PRODUCT_SPECS.
 
 Run:  python3 data/generate_synthetic_data.py
 """
@@ -24,26 +25,59 @@ OUT = Path(__file__).parent
 rng = random.Random(42)
 
 DEMO_DATE = date(2026, 11, 18)          # "today" for the demo
-TOMORROW = DEMO_DATE + timedelta(days=1)
+TOMORROW = DEMO_DATE + timedelta(days=1)  # procedure day for the NYC demo stories
 
-# SOP storage spec for every product: 2–8 °C (≈36–46 °F)
-SOP_MIN_F, SOP_MAX_F = 36.0, 46.0
+# --------------------------------------------------------------------------
+# Temperature-sensitive product lines (fictional, based on real device/biologic
+# categories). All temperatures are °F. Ranges reflect typical labeling for the
+# category, not any specific real product spec.
+#
+#   lo / hi        allowed storage range (becomes temperature_min_f / _max_f)
+#   normal         in-spec sensor band used for most readings
+#   p_excursion    base chance a shipment in transit breaches its range
+#                  (doubled when the shipment is Delayed)
+#   excursion      which direction(s) a breach can happen: "above", "below", or "both"
+#   above / below  breach band for each direction
+# --------------------------------------------------------------------------
+PRODUCT_SPECS = {
+    # Frozen biologic: must stay at or below -20 °C (-4 °F). Failure mode = dry ice runs out and it thaws.
+    "FIB-F04": dict(lo=-22.0, hi=-4.0, normal=(-15.0, -8.0), p_excursion=0.08,
+                    excursion=["above"], above=(-2.0, 12.0)),
+    # Drug-eluting stent: upper-limit product (~25 °C). Failure mode = heat soak on a warm dock or tarmac.
+    "STENT-C13": dict(lo=59.0, hi=77.0, normal=(61.0, 74.0), p_excursion=0.06,
+                      excursion=["above"], above=(79.0, 88.0)),
+    # Drug-coated balloon (paclitaxel): upper limit ~30 °C. Failure mode = heat.
+    "CATH-B08": dict(lo=59.0, hi=86.0, normal=(63.0, 80.0), p_excursion=0.06,
+                     excursion=["above"], above=(87.0, 95.0)),
+    # Refrigerated topical hemostat: 2–8 °C. Failure mode = freezing on a cold dock, or warming in the sun.
+    "THRM-R04": dict(lo=36.0, hi=46.0, normal=(38.0, 44.0), p_excursion=0.05,
+                     excursion=["below", "above"], below=(26.0, 33.0), above=(47.0, 52.0)),
+    # Tissue valve: room-temperature storage, must never freeze. Failure mode = near-/below-freezing exposure.
+    "VALVE-E11": dict(lo=50.0, hi=77.0, normal=(58.0, 72.0), p_excursion=0.06,
+                      excursion=["below"], below=(22.0, 31.0)),
+    # Cryopreserved bone allograft: deep frozen (≤ -40 °F). Failure mode = warming when dry ice/LN2 is short.
+    "BONE-A17": dict(lo=-112.0, hi=-40.0, normal=(-58.0, -46.0), p_excursion=0.05,
+                     excursion=["above"], above=(-34.0, -22.0)),
+    # Corneal graft in cold-storage medium: 2–8 °C. Failure mode = freezing or warming.
+    "CORN-K02": dict(lo=36.0, hi=46.0, normal=(38.0, 44.0), p_excursion=0.05,
+                     excursion=["below", "above"], below=(26.0, 33.0), above=(47.0, 50.0)),
+}
 
 # --------------------------------------------------------------------------
 # Products: must match supplier_sops.csv exactly (product_id, sku, name, supplier)
 # origin = supplier's manufacturing / ship-from city
 # --------------------------------------------------------------------------
 PRODUCTS = [
-    ("PROD-0001", "IMPL-A21", "Hip Implant Set", "SUP-001", ("Memphis", "TN", 35.1495, -90.0490)),
-    ("PROD-0002", "STENT-C13", "Cardio Stent Kit", "SUP-002", ("Chicago", "IL", 41.8781, -87.6298)),
-    ("PROD-0003", "CATH-B08", "Balloon Catheter", "SUP-003", ("Dallas", "TX", 32.7767, -96.7970)),
-    ("PROD-0004", "PATCH-D02", "Hernia Patch", "SUP-004", ("Phoenix", "AZ", 33.4484, -112.0740)),
-    ("PROD-0005", "VALVE-E11", "Aortic Valve", "SUP-005", ("Seattle", "WA", 47.6062, -122.3321)),
-    ("PROD-0006", "IMPL-A21", "Hip Implant Set", "SUP-009", ("Cleveland", "OH", 41.4993, -81.6944)),
-    ("PROD-0007", "STENT-C13", "Cardio Stent Kit", "SUP-010", ("Miami", "FL", 25.7617, -80.1918)),
-    ("PROD-0008", "VALVE-E11", "Aortic Valve", "SUP-005", ("San Jose", "CA", 37.3382, -121.8863)),
-    ("PROD-0009", "CATH-B08", "Balloon Catheter", "SUP-003", ("Denver", "CO", 39.7392, -104.9903)),
-    ("PROD-0010", "IMPL-A21", "Hip Implant Set", "SUP-001", ("Memphis", "TN", 35.1495, -90.0490)),
+    ("PROD-0001", "FIB-F04", "Frozen Fibrin Sealant Kit", "SUP-001", ("Memphis", "TN", 35.1495, -90.0490)),
+    ("PROD-0002", "STENT-C13", "Cardiac Stent Kit (coated)", "SUP-002", ("Chicago", "IL", 41.8781, -87.6298)),
+    ("PROD-0003", "CATH-B08", "Drug-Coated Balloon Catheter (paclitaxel)", "SUP-003", ("Dallas", "TX", 32.7767, -96.7970)),
+    ("PROD-0004", "THRM-R04", "Refrigerated Thrombin Hemostat", "SUP-004", ("Phoenix", "AZ", 33.4484, -112.0740)),
+    ("PROD-0005", "VALVE-E11", "Bioprosthetic Aortic Valve (bovine tissue)", "SUP-005", ("Seattle", "WA", 47.6062, -122.3321)),
+    ("PROD-0006", "BONE-A17", "Frozen Bone Allograft (cryopreserved)", "SUP-009", ("Cleveland", "OH", 41.4993, -81.6944)),
+    ("PROD-0007", "STENT-C13", "Cardiac Stent Kit (coated)", "SUP-010", ("Miami", "FL", 25.7617, -80.1918)),
+    ("PROD-0008", "VALVE-E11", "Bioprosthetic Aortic Valve (bovine tissue)", "SUP-005", ("San Jose", "CA", 37.3382, -121.8863)),
+    ("PROD-0009", "CATH-B08", "Drug-Coated Balloon Catheter (paclitaxel)", "SUP-003", ("Denver", "CO", 39.7392, -104.9903)),
+    ("PROD-0010", "CORN-K02", "Corneal Tissue Graft (cold-storage medium)", "SUP-008", ("San Francisco", "CA", 37.7749, -122.4194)),
 ]
 
 # --------------------------------------------------------------------------
@@ -150,57 +184,6 @@ FACILITY_SEEDS = [
 
 CARRIERS = ["UPS Health", "FedEx Cold", "DHL Medical Express", "Marken", "Cryoport"]
 
-# Destination-metro synthetic forecast for TOMORROW (NYC values given by the user).
-FORECAST = {
-    ("New York", "NY"): (62, 44, "Partly cloudy, unseasonably warm", "Warm-temperature advisory for cold chain"),
-    ("Bronx", "NY"): (62, 44, "Partly cloudy, unseasonably warm", "Warm-temperature advisory for cold chain"),
-    ("Queens", "NY"): (62, 44, "Partly cloudy, unseasonably warm", "Warm-temperature advisory for cold chain"),
-    ("Brooklyn", "NY"): (62, 44, "Partly cloudy, unseasonably warm", "Warm-temperature advisory for cold chain"),
-    ("Hauppauge", "NY"): (60, 43, "Mostly sunny", ""),
-    ("Edison", "NJ"): (63, 44, "Partly cloudy", ""),
-    ("Hartford", "CT"): (56, 38, "Mostly sunny", ""),
-    ("Memphis", "TN"): (66, 50, "Cloudy", ""),
-    ("Newark", "NJ"): (63, 45, "Partly cloudy, unseasonably warm", "Warm-temperature advisory for cold chain"),
-    ("Jersey City", "NJ"): (62, 45, "Partly cloudy, unseasonably warm", "Warm-temperature advisory for cold chain"),
-    ("Hoboken", "NJ"): (62, 45, "Partly cloudy, unseasonably warm", "Warm-temperature advisory for cold chain"),
-    ("Hackensack", "NJ"): (61, 42, "Partly cloudy", ""),
-    ("Yonkers", "NY"): (61, 42, "Partly cloudy", ""),
-    ("White Plains", "NY"): (60, 41, "Partly cloudy", ""),
-    ("Mineola", "NY"): (60, 45, "Mostly sunny", ""),
-    ("Garden City", "NY"): (60, 45, "Mostly sunny", ""),
-    ("Stamford", "CT"): (59, 41, "Mostly sunny", ""),
-    ("New Haven", "CT"): (57, 40, "Mostly sunny", ""),
-    ("Boston", "MA"): (55, 40, "Breezy, clear", ""),
-    ("Cambridge", "MA"): (55, 39, "Breezy, clear", ""),
-    ("Providence", "RI"): (56, 39, "Clear", ""),
-    ("Albany", "NY"): (50, 33, "Cloudy, rain late", ""),
-    ("Philadelphia", "PA"): (64, 47, "Mild, light wind", "Warm-temperature advisory for cold chain"),
-    ("Bryn Mawr", "PA"): (63, 45, "Mild", ""),
-    ("Baltimore", "MD"): (66, 48, "Mild, humid", "Warm-temperature advisory for cold chain"),
-    ("Washington", "DC"): (67, 49, "Mild, humid", "Warm-temperature advisory for cold chain"),
-    ("Pittsburgh", "PA"): (45, 34, "Rain showers", ""),
-    ("Cleveland", "OH"): (33, 27, "Lake-effect snow, 6-10 in", "Winter storm warning"),
-    ("Chicago", "IL"): (34, 25, "Snow showers, gusty", "Winter weather advisory"),
-    ("Evanston", "IL"): (33, 24, "Snow showers, gusty", "Winter weather advisory"),
-    ("Minneapolis", "MN"): (24, 11, "Snow, blowing snow", "Winter storm warning"),
-    ("Denver", "CO"): (28, 12, "Heavy snow, I-70 closures", "Winter storm warning"),
-    ("Boulder", "CO"): (26, 10, "Heavy snow", "Winter storm warning"),
-    ("Atlanta", "GA"): (70, 52, "Sunny", ""),
-    ("Charlotte", "NC"): (68, 48, "Sunny", ""),
-    ("Nashville", "TN"): (63, 44, "Thunderstorms", "Severe thunderstorm watch"),
-    ("Miami", "FL"): (82, 72, "Humid, scattered storms", ""),
-    ("Coral Gables", "FL"): (82, 71, "Humid, scattered storms", ""),
-    ("Austin", "TX"): (78, 58, "Sunny", ""),
-    ("Dallas", "TX"): (74, 55, "Windy", ""),
-    ("Phoenix", "AZ"): (80, 56, "Sunny", ""),
-    ("Seattle", "WA"): (49, 42, "Atmospheric river, heavy rain", "Flood watch"),
-    ("Portland", "OR"): (51, 43, "Heavy rain", "Flood watch"),
-    ("Boise", "ID"): (40, 28, "Cloudy", ""),
-    ("San Diego", "CA"): (68, 55, "Sunny", ""),
-    ("Los Angeles", "CA"): (72, 56, "Sunny", ""),
-    ("San Francisco", "CA"): (60, 50, "Fog, then sun", ""),
-}
-
 # Delay reasons, picked based on where the shipment is going / coming from.
 WEATHER_DELAYS_BY_ORIGIN = {
     "Chicago": "Lake-effect snow - linehaul held at Chicago hub",
@@ -209,14 +192,22 @@ WEATHER_DELAYS_BY_ORIGIN = {
     "Seattle": "Atmospheric river - SEA cargo ground stop",
     "San Jose": "Connecting flight cancelled via SEA (heavy rain)",
 }
-NYC_AREA_DELAYS = [
-    "JFK cargo backlog - pallet held on warm dock",
+NYC_AREA_DELAYS = [  # not product-specific
     "Reefer unit fault on final-mile truck",
-    "Missed linehaul connection at Newark hub",
     "Dock congestion at Bronx cold chain center",
-    "Warm-dock hold - temperature excursion review",
+    "Missed linehaul connection at Newark hub",
     "Driver hours-of-service limit - handoff delayed",
 ]
+# Cold-chain reasons only make sense for the products they affect.
+NYC_REASONS_BY_SKU = {
+    "STENT-C13": ["JFK cargo backlog - pallet held on warm dock", "Warm-dock hold at JFK cargo - pallet above 80F"],
+    "CATH-B08": ["JFK cargo backlog - pallet held on warm dock", "Warm-dock hold at JFK cargo - pallet above 80F"],
+    "VALVE-E11": ["Cold-dock hold at JFK - pallet staged near freezing"],
+    "THRM-R04": ["Cold-dock hold at JFK - pallet staged near freezing"],
+    "CORN-K02": ["Cold-dock hold at JFK - pallet staged near freezing"],
+    "FIB-F04": ["Dry-ice charge depleted on final-mile leg"],
+    "BONE-A17": ["Dry-ice charge depleted on final-mile leg"],
+}
 GENERIC_DELAYS = [
     "Carrier capacity shortage",
     "Missed connection at Memphis air gateway",
@@ -246,8 +237,33 @@ def write_csv(name, header, rows):
     print(f"  {name:22s} {len(rows):4d} rows")
 
 
+def sensor_reading(sku, status):
+    """Last recorded payload temperature (°F). Delivered shipments stay in spec."""
+    spec = PRODUCT_SPECS[sku]
+    if status != "Delivered" and rng.random() < spec["p_excursion"] * (2 if status == "Delayed" else 1):
+        direction = rng.choice(spec["excursion"])
+        return round(rng.uniform(*spec[direction]), 1)
+    return round(rng.uniform(*spec["normal"]), 1)
+
+
+def shipment_row(n, pid, sku, pname, sup, ocity, ostate, olat, olon, fac, site,
+                 ship_date, orig_eta, eta, carrier, status, delay_hours, delay_reason,
+                 priority, procedure_date, temp, miles):
+    spec = PRODUCT_SPECS[sku]
+    return [
+        # --- original columns (unchanged names/order) ---
+        f"SHP-{30001 + n}", pid, sku, pname, sup, f"{ocity}, {ostate}", fac["metro"],
+        ship_date.isoformat(), eta.isoformat(), carrier, status,
+        spec["hi"], spec["lo"],
+        # --- new columns ---
+        orig_eta.isoformat(), delay_hours, delay_reason, priority, procedure_date.isoformat(),
+        temp, fac["facility_id"], fac["facility_name"], fac["facility_type"], site[0],
+        olat, olon, fac["latitude"], fac["longitude"], round(miles),
+    ]
+
+
 def main():
-    print(f"Generating synthetic data (demo date {DEMO_DATE}, forecast for {TOMORROW})")
+    print(f"Generating synthetic data (demo date {DEMO_DATE})")
 
     # ---- sites ----------------------------------------------------------
     write_csv(
@@ -342,7 +358,7 @@ def main():
                 delay_reason = WEATHER_DELAYS_BY_ORIGIN[ocity]
                 delay_hours = rng.choice([18, 24, 30, 36, 48])
             elif fac in nyc_area:
-                delay_reason = rng.choice(NYC_AREA_DELAYS)
+                delay_reason = rng.choice(NYC_REASONS_BY_SKU.get(sku, []) + NYC_AREA_DELAYS)
                 delay_hours = rng.choice([4, 6, 8, 12, 18, 24])
             else:
                 delay_reason = rng.choice(GENERIC_DELAYS)
@@ -354,50 +370,33 @@ def main():
         proc_offset = {"STAT": rng.randint(0, 1), "Urgent": rng.randint(1, 2), "Routine": rng.randint(2, 6)}[priority]
         procedure_date = orig_eta + timedelta(days=proc_offset)
 
-        # Last sensor reading: in spec normally; warm docks in the NYC heat drift above 46 °F
-        temp = round(rng.uniform(37.5, 44.5), 1)
-        if status == "Delayed" and fac in nyc_area and ("warm" in delay_reason.lower() or "reefer" in delay_reason.lower() or "dock" in delay_reason.lower()):
-            temp = round(rng.uniform(45.5, 50.5), 1)
-        elif status in ("Delayed", "In-Transit") and fac in nyc_area and rng.random() < 0.15:
-            temp = round(rng.uniform(44.5, 46.5), 1)
-        if status == "Delivered":
-            temp = round(rng.uniform(37.0, 43.0), 1)
+        temp = sensor_reading(sku, status)
 
-        dest = fac["metro"]
-        shipments.append([
-            # --- original columns (unchanged names/order) ---
-            f"SHP-{30001 + n}", pid, sku, pname, sup, f"{ocity}, {ostate}", dest,
-            ship_date.isoformat(), eta.isoformat(), rng.choice(CARRIERS), status,
-            SOP_MAX_F, SOP_MIN_F,
-            # --- new columns ---
-            orig_eta.isoformat(), delay_hours, delay_reason, priority, procedure_date.isoformat(),
-            temp, fac["facility_id"], fac["facility_name"], fac["facility_type"], site[0],
-            olat, olon, fac["latitude"], fac["longitude"], round(miles),
-        ])
+        shipments.append(shipment_row(
+            n, pid, sku, pname, sup, ocity, ostate, olat, olon, fac, site,
+            ship_date, orig_eta, eta, rng.choice(CARRIERS), status, delay_hours, delay_reason,
+            priority, procedure_date, temp, miles))
 
-    # Guarantee a handful of headline NYC stories for tomorrow's demo
+    # Guarantee four headline NYC stories for tomorrow's demo (SHP-30001..30004).
+    # (facility, product, delay reason, delay hours, last sensor reading °F)
     headline = [
-        ("FAC-002", "PROD-0005", "JFK cargo backlog - pallet held on warm dock", 18, 48.7),  # aortic valve, heart institute
-        ("FAC-001", "PROD-0001", "Reefer unit fault on final-mile truck", 12, 49.2),        # hip implant
-        ("FAC-013", "PROD-0002", "Lake-effect snow - linehaul held at Chicago hub", 30, 43.9),
-        ("FAC-009", "PROD-0008", "Connecting flight cancelled via SEA (heavy rain)", 24, 44.8),
+        ("FAC-002", "PROD-0005", "Cold-dock hold at JFK - pallet staged near freezing", 26, 31.4),  # valve, freeze exposure
+        ("FAC-001", "PROD-0001", "Dry-ice charge depleted on final-mile leg", 30, 9.8),            # fibrin sealant, thawing
+        ("FAC-013", "PROD-0002", "Warm-dock hold at JFK cargo - pallet above 80F", 30, 84.6),     # coated stent, heat
+        ("FAC-009", "PROD-0009", "Winter storm - I-70 closures out of Denver", 24, 71.8),         # balloon, in spec, late
     ]
     for i, (fid, pid, reason, hrs, temp) in enumerate(headline):
         fac = next(f for f in facilities if f["facility_id"] == fid)
         prod = next(p for p in PRODUCTS if p[0] == pid)
-        ocity, ostate, olat, olon = prod[4]
+        _, sku, pname, sup, (ocity, ostate, olat, olon) = prod
+        site = next(s for s in SITES if s[0] == fac["serving_site_id"])
         miles = haversine_mi(olat, olon, fac["latitude"], fac["longitude"])
         orig_eta = TOMORROW
         eta = orig_eta + timedelta(hours=hrs)
-        row = shipments[i]
-        row[:] = [
-            row[0], prod[0], prod[1], prod[2], prod[3], f"{ocity}, {ostate}", fac["metro"],
-            (orig_eta - timedelta(days=2)).isoformat(), eta.isoformat(), "FedEx Cold", "Delayed",
-            SOP_MAX_F, SOP_MIN_F,
-            orig_eta.isoformat(), hrs, reason, "STAT", TOMORROW.isoformat(),
-            temp, fac["facility_id"], fac["facility_name"], fac["facility_type"], fac["serving_site_id"],
-            olat, olon, fac["latitude"], fac["longitude"], round(miles),
-        ]
+        shipments[i] = shipment_row(
+            i, pid, sku, pname, sup, ocity, ostate, olat, olon, fac, site,
+            orig_eta - timedelta(days=2), orig_eta, eta, "FedEx Cold", "Delayed", hrs, reason,
+            "STAT", TOMORROW, temp, miles)
 
     write_csv(
         "shipments.csv",
@@ -409,23 +408,6 @@ def main():
          "origin_latitude", "origin_longitude", "destination_latitude", "destination_longitude",
          "route_miles"],
         shipments,
-    )
-
-    # ---- weather forecast ----------------------------------------------
-    metros = sorted({f["metro"] for f in facilities} | {f"{s[3]}, {s[4]}" for s in SITES})
-    rows = []
-    for m in metros:
-        city, state = m.split(", ")
-        if (city, state) not in FORECAST:
-            continue
-        hi, lo, cond, alert = FORECAST[(city, state)]
-        rows.append([city, state, TOMORROW.isoformat(), hi, lo, cond, alert,
-                     max(0, hi - int(SOP_MAX_F))])
-    write_csv(
-        "weather_forecast.csv",
-        ["city", "state", "forecast_date", "high_f", "low_f", "conditions", "weather_alert",
-         "degrees_above_cold_chain_max"],
-        rows,
     )
 
 

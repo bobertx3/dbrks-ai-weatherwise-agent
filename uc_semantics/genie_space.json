@@ -68,7 +68,7 @@
             {
               "column_name": "metro",
               "description": [
-                "Destination metro in 'City, ST' form; matches shipments.destination and weather_forecast city/state. NYC boroughs are all 'New York, NY'."
+                "Destination metro in 'City, ST' form; NYC boroughs are all 'New York, NY'."
               ],
               "enable_entity_matching": true
             }
@@ -171,7 +171,7 @@
             {
               "column_name": "temperature_max_f",
               "description": [
-                "SOP max allowed temperature (46F for all current products)."
+                "Upper limit of the product's allowed range (SOP-specific: -4F frozen sealant, -40F frozen bone allograft, 46F refrigerated, 77F valve or stent, 86F balloon)."
               ]
             }
           ]
@@ -204,19 +204,6 @@
               "enable_format_assistance": true
             }
           ]
-        },
-        {
-          "identifier": "__CATALOG__.__SCHEMA__.weather_forecast",
-          "column_configs": [
-            {
-              "column_name": "weather_alert",
-              "synonyms": [
-                "advisory",
-                "weather warning"
-              ],
-              "enable_format_assistance": true
-            }
-          ]
         }
       ],
       "metric_views": [
@@ -230,14 +217,15 @@
         {
           "id": "b0000000000000000000000000000001",
           "content": [
-            "Domain: cold-chain shipments of surgical implants and devices (hip implants, aortic valves, stents, catheters, hernia patches) from suppliers to hospitals and clinics.\n",
-            "For KPI questions (delay rate, excursions, weather at-risk shipments, procedures at risk, average delay) prefer the shipment_risk_metrics metric view and use MEASURE() on its measures.\n",
-            "Temperature excursion = last_recorded_temp_f > temperature_max_f OR last_recorded_temp_f < temperature_min_f. All current products must stay 36-46F (2-8C).\n",
+            "Domain: cold-chain shipments of temperature-sensitive MedTech and surgical biologics (frozen fibrin sealant, frozen bone allograft, refrigerated thrombin hemostat, corneal grafts, bioprosthetic aortic valves, coated cardiac stents, drug-coated balloon catheters) from suppliers to hospitals and clinics.\n",
+            "For KPI questions (delay rate, excursions, procedures at risk, average delay) prefer the shipment_risk_metrics metric view and use MEASURE() on its measures.\n",
+            "Temperature excursion = last_recorded_temp_f > temperature_max_f OR last_recorded_temp_f < temperature_min_f, using that shipment's own limits. Ranges differ by product: frozen fibrin sealant -22 to -4F, frozen bone allograft -112 to -40F, refrigerated thrombin hemostat and corneal graft 36-46F (2-8C), bioprosthetic aortic valve 50-77F (never freeze), coated cardiac stent 59-77F, drug-coated balloon 59-86F. Freezing is an excursion for valves, thrombin and corneal grafts. Warming or thawing is an excursion for frozen products. Heat is the excursion for coated stents and balloons.\n",
             "Active shipment = status <> 'Delivered'. Delayed = status = 'Delayed'.\n",
             "Surgery / procedure at risk = an active shipment whose eta_date is after its procedure_date. 'At risk with no buffer' = DATEDIFF(procedure_date, eta_date) <= 1.\n",
             "NYC, New York, Manhattan, Brooklyn, Queens, Bronx and Staten Island all mean shipments.destination = 'New York, NY' (or facilities.metro = 'New York, NY').\n",
-            "Weather at risk = destination forecast high_f above the shipment's temperature_max_f. Join weather_forecast on shipments.destination = concat(weather_forecast.city, ', ', weather_forecast.state).\n",
+            "Weather is not stored in these tables. For weather or forecast questions, say the WeatherWise agent checks live forecasts; don't infer weather from the data.\n",
             "For backup or alternate inventory, use inventory with on_hand_qty > 0, joined to sites for location; prefer lots with the latest lot_expiry and sites in the same state or metro as the destination.\n",
+            "Escalation tiers, contacts and SLAs differ by product and supplier. Read supplier_sops.product_doc for the shipment's product_id; never apply one 2-8C rule to every product.\n",
             "Always show shipment_id, product_name and the destination facility name when listing shipments."
           ]
         }
@@ -282,7 +270,7 @@
             "SELECT i.site_id, i.site_name, st.site_type, i.city, i.state, i.on_hand_qty, i.lot_expiry\n",
             "FROM __CATALOG__.__SCHEMA__.inventory i\n",
             "JOIN __CATALOG__.__SCHEMA__.sites st ON st.site_id = i.site_id\n",
-            "WHERE i.product_name = 'Aortic Valve'\n",
+            "WHERE i.product_name = 'Bioprosthetic Aortic Valve (bovine tissue)'\n",
             "  AND i.on_hand_qty > 0\n",
             "  AND i.state IN ('NY', 'NJ', 'CT', 'PA')\n",
             "ORDER BY i.on_hand_qty DESC, i.lot_expiry DESC"
