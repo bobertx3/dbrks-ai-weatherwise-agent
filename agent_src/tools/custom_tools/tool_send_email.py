@@ -21,14 +21,18 @@ def _as_list(value: Optional[str]):
     return [v.strip() for v in re.split(r"[;,]", value) if v.strip()]
 
 @tool("send_email", return_direct=True)
-def send_email(recipient: Optional[str] = None, subject: str = "", message: str = "") -> str:
+def send_email(recipient: Optional[str] = None, subject: str = "", message: str = "",
+               summary: str = "", call_to_action: str = "") -> str:
     """
-    Sends a styled HTML email via Mailgun.
+    Sends a short, styled escalation email via Mailgun. Layout, top to bottom:
+    subject heading, `summary`, a yellow `call_to_action` box, then `message` as details.
     Arguments:
-      recipient: (optional) email address(es), comma/semicolon separated.
-                 If not provided, falls back to RECIPIENT env var.
-      subject:   subject line
-      message:   message body (HTML allowed)
+      recipient:      (optional) email address(es), comma/semicolon separated.
+                      If not provided, falls back to RECIPIENT env var.
+      subject:        subject line (also the heading), under ~70 characters
+      summary:        1–2 plain sentences: what is at risk and what happens next
+      call_to_action: (optional) who to call, e.g. "Call Felix Romero (CardioNova) at +1-602-555-0144"
+      message:        concise details (HTML allowed): one line per shipment, then up to 3 next steps
     """
     try:
         # --- validate config
@@ -46,23 +50,35 @@ def send_email(recipient: Optional[str] = None, subject: str = "", message: str 
             return "❌ No recipient provided (argument or RECIPIENT env)."
 
         # --- plain text + html
-        text = re.sub(r"<[^>]+>", "", message.replace("<br/>", "\n").replace("<br>", "\n"))
+        body_all = "\n\n".join(x for x in [summary, call_to_action, message] if x and x.strip())
+        text = re.sub(r"<[^>]+>", "", body_all.replace("<br/>", "\n").replace("<br>", "\n"))
+        cta = (
+            f"<div style='margin:14px 0 4px;background:#fff4c2;border:1px solid #f0d36b;border-left:4px solid #e6ab4b;"
+            f"border-radius:8px;padding:10px 12px;font-weight:600;color:#3d2f00;'>&#128222; {_html.escape(call_to_action)}</div>"
+            if call_to_action and call_to_action.strip() else ""
+        )
+        summ = f"<div style='font-size:15px;line-height:1.5;margin:0;'>{summary}</div>" if summary and summary.strip() else ""
+        details = (
+            f"<div style='margin-top:16px;padding-top:12px;border-top:1px solid {LINE};font-size:13.5px;line-height:1.5;color:#33414e;'>"
+            f"<div style='font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:{SOFT};margin-bottom:6px;'>Details</div>"
+            f"{message}</div>"
+            if message and message.strip() else ""
+        )
         html = f"""
         <html><body style='margin:0;padding:0;background:#eef2f6;'>
-        <table width='100%' cellpadding='0' cellspacing='0' style='background:#eef2f6;'><tr><td align='center' style='padding:24px 12px;'>
-        <table width='640' cellpadding='0' cellspacing='0' style='max-width:640px;width:100%;border-radius:12px;overflow:hidden;border:1px solid {LINE};'>
-        <tr><td style='background:{PAGE};padding:16px 22px;font-family:{FONT};'>
-          <span style='display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;border-radius:7px;background:{CORAL};color:{PAGE};font-weight:800;font-size:14px;vertical-align:middle;'>W</span>
-          <span style='color:#dbe4ec;font-size:15px;font-weight:700;vertical-align:middle;margin-left:8px;'>MedTech WeatherWise Agent</span>
-          <span style='float:right;margin-top:3px;color:{CORAL};border:1px solid {CORAL};border-radius:999px;padding:2px 9px;font-size:10px;font-weight:700;letter-spacing:.12em;'>ESCALATION</span>
-          <div style='height:2px;background:{TEAL};margin-top:14px;width:48px;border-radius:2px;'></div>
+        <table width='100%' cellpadding='0' cellspacing='0' style='background:#eef2f6;'><tr><td align='center' style='padding:18px 10px;'>
+        <table width='600' cellpadding='0' cellspacing='0' style='max-width:600px;width:100%;border-radius:10px;overflow:hidden;border:1px solid {LINE};'>
+        <tr><td style='background:{PAGE};padding:11px 18px;font-family:{FONT};'>
+          <span style='display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;background:{CORAL};color:{PAGE};font-weight:800;font-size:12px;vertical-align:middle;'>W</span>
+          <span style='color:#dbe4ec;font-size:13.5px;font-weight:700;vertical-align:middle;margin-left:7px;'>MedTech WeatherWise Agent</span>
+          <span style='float:right;margin-top:2px;color:{CORAL};border:1px solid {CORAL};border-radius:999px;padding:1px 8px;font-size:9.5px;font-weight:700;letter-spacing:.12em;'>ESCALATION</span>
         </td></tr>
-        <tr><td style='background:{PANEL};padding:22px 24px;font-family:{FONT};color:{INK};font-size:15px;line-height:1.55;'>
-          <div style='font-size:18px;font-weight:700;margin:0 0 12px 0;'>{_html.escape(subject)}</div>
-          <div>{message}</div>
+        <tr><td style='background:{PANEL};padding:16px 20px 18px;font-family:{FONT};color:{INK};'>
+          <div style='font-size:17px;font-weight:700;line-height:1.3;margin:0 0 8px 0;'>{_html.escape(subject)}</div>
+          {summ}{cta}{details}
         </td></tr>
-        <tr><td style='background:#f7f9fb;border-top:1px solid {LINE};padding:12px 24px;font-family:{FONT};font-size:11.5px;color:{SOFT};'>
-          Sent by the WeatherWise agent · Temperature-controlled logistics · Synthetic demo data
+        <tr><td style='background:#f7f9fb;border-top:1px solid {LINE};padding:9px 20px;font-family:{FONT};font-size:11px;color:{SOFT};'>
+          Sent by the WeatherWise agent · Synthetic demo data
         </td></tr>
         </table></td></tr></table></body></html>""".strip()
 
