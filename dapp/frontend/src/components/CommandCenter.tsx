@@ -7,6 +7,7 @@ import { BarRow, Kpi, Skeleton } from "./Dashboard";
 const STATUS_ORDER = ["In-Transit", "Delayed", "Out-for-Delivery", "Label-Create", "Delivered"];
 const STATUS_TONE: Record<string, string> = { "In-Transit": "var(--teal)", Delayed: "var(--coral)", "Out-for-Delivery": "var(--blue)", "Label-Create": "var(--soft)", Delivered: "var(--muted)" };
 const nf = new Intl.NumberFormat("en-US");
+const ROW_LIMIT = 12; // riskiest first; the rest behind "Show all"
 
 /** Risk first: surgery missed, then sensor excursion, then delayed; then soonest ETA. */
 function riskRank(r: MapRoute) {
@@ -38,6 +39,7 @@ export default function CommandCenter({
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [focus, setFocus] = useState<MapRoute | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -126,7 +128,7 @@ export default function CommandCenter({
         <div className="cc-table-head">
           <div>
             <div className="lbl">ACTIVE SHIPMENTS</div>
-            <h3>Filter by status · click a row to see it on the map</h3>
+            <h3>Riskiest first · click a row to see it on the map</h3>
           </div>
           <div className="chips" role="group" aria-label="Filter by status">
             <button className={`chip ${status === null ? "on" : ""}`} onClick={() => setStatus(null)}>
@@ -147,7 +149,7 @@ export default function CommandCenter({
         {!map ? (
           <Skeleton />
         ) : (
-          <div className="table-wrap cc-scroll">
+          <div className="table-wrap cc-rows">
             <table>
               <thead>
                 <tr>
@@ -163,7 +165,7 @@ export default function CommandCenter({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {(showAll ? rows : rows.slice(0, ROW_LIMIT)).map((r) => (
                   <tr key={r.shipment_id} className={focus?.shipment_id === r.shipment_id ? "sel" : ""} onClick={() => pick(r)}>
                     <td className="mono teal">{r.shipment_id}</td>
                     <td>{r.product_name}</td>
@@ -198,6 +200,11 @@ export default function CommandCenter({
                 ))}
               </tbody>
             </table>
+            {rows.length > ROW_LIMIT && (
+              <button className="show-all" onClick={() => setShowAll((v) => !v)}>
+                {showAll ? `Show top ${ROW_LIMIT}` : `Show all ${rows.length} shipments`}
+              </button>
+            )}
           </div>
         )}
       </div>

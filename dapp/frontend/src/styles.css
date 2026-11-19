@@ -601,3 +601,92 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; gap: 6
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .details .run-agent { width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; }
+
+/* ══ Layout v2: one page scroll (browser zoom friendly) ═══════════════════════
+   The page scrolls as a whole. The header is sticky; the assistant drawer sticks
+   below it and is the only panel with its own scroll (a chat should). */
+:root { --topbar-h: 76px; }
+html, body, #root { height: auto; min-height: 100%; }
+.app { height: auto; min-height: 100vh; display: block; }
+.topbar { position: sticky; top: 0; z-index: 950; align-items: center; padding: 10px 22px; }
+.brand h1 { font-size: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.body-row { display: flex; align-items: flex-start; min-height: calc(100vh - var(--topbar-h)); }
+.stage { display: block; min-height: 0; }
+.command { overflow: visible; min-height: 0; }
+.cc-map { scroll-margin-top: calc(var(--topbar-h) + 12px); }
+
+.assist { position: sticky; top: var(--topbar-h); height: calc(100vh - var(--topbar-h)); align-self: flex-start; }
+
+/* KPI tiles reflow instead of squeezing their labels */
+.command .kpis { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+/* Table: no inner scroll; header sticks under the page header; long text wraps */
+.cc-table-head { display: block; }
+.cc-table-head .chips { margin-top: 10px; }
+.cc-table .table-wrap.cc-rows { overflow: visible; }
+.cc-rows thead th { position: sticky; top: var(--topbar-h); z-index: 2; }
+.cc-table td { white-space: normal; }
+.cc-table td.route, .cc-table td:first-child, .cc-table td.mono { white-space: nowrap; }
+.show-all {
+  display: block; width: 100%; padding: 9px; background: var(--sunken); border: 0; border-top: 1px solid var(--line);
+  color: var(--teal); font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.show-all:hover { background: rgba(79, 209, 197, 0.08); }
+
+/* ── Map: full width, controls float on the map ─────────────────────────────── */
+.netmap.embedded {
+  display: block; grid-template-columns: none; height: clamp(420px, 60vh, 620px);
+  border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel);
+}
+.netmap.embedded .netmap-canvas { height: 100%; }
+.map-ov { position: absolute; z-index: 1000; }
+.map-toolbar {
+  top: 10px; left: 10px; right: 340px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
+  pointer-events: none;
+}
+.map-toolbar > * { pointer-events: auto; }
+.ov-group {
+  display: inline-flex; align-items: center; gap: 7px; background: rgba(10, 16, 23, 0.86); border: 1px solid var(--line-strong);
+  border-radius: 9px; padding: 4px 6px 4px 9px; backdrop-filter: blur(6px);
+}
+.ov-group .seg { margin-top: 0; }
+.ov-group .seg button { padding: 4px 9px; white-space: nowrap; }
+.ov-group .seg button:disabled { opacity: 0.4; cursor: default; }
+.ov-group.layers { padding: 3px 4px; gap: 2px; }
+.ov-group.layers .layer { padding: 3px 7px; white-space: nowrap; }
+.ov-lbl { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.ov-note { font-size: 11.5px; color: var(--amber); background: rgba(10, 16, 23, 0.86); border: 1px solid rgba(230, 171, 75, 0.4); border-radius: 7px; padding: 4px 8px; }
+.map-legend {
+  left: 10px; bottom: 22px; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--soft);
+  background: rgba(10, 16, 23, 0.86); border: 1px solid var(--line-strong); border-radius: 9px; padding: 7px 10px;
+}
+.map-legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
+.map-error { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+.map-panel { top: 10px; right: 10px; width: 310px; max-height: calc(100% - 20px); overflow: auto; }
+.map-panel .card.tight { background: rgba(14, 26, 38, 0.94); border-color: var(--line-strong); backdrop-filter: blur(6px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); }
+.map-panel .card.tight .close { position: absolute; top: 9px; right: 9px; background: transparent; border: 0; color: var(--muted); }
+.map-panel.collapsed { width: auto; }
+.ov-reopen {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--coral);
+  background: rgba(10, 16, 23, 0.9); border: 1px solid rgba(242, 114, 94, 0.5); border-radius: 999px; padding: 6px 11px;
+}
+.netmap-canvas .leaflet-bottom.leaflet-right .leaflet-control-zoom { margin-bottom: 26px; }
+
+/* ── Header shrinks instead of wrapping ─────────────────────────────────────── */
+@media (max-width: 1600px) { .brand p { display: none; } }
+@media (max-width: 1450px) {
+  .actions .btn .bl.shrink { display: none; }
+  .actions .btn { padding-left: 10px; padding-right: 10px; }
+  .brand h1 .tagline { display: none; }
+}
+@media (max-width: 1050px) { .actions .btn .bl { display: none; } }
+
+/* ── Small screens: drawer floats over the page instead of squeezing it ───── */
+@media (max-width: 1300px) {
+  .assist { position: fixed; right: 0; top: var(--topbar-h); bottom: 0; height: auto; z-index: 940; }
+  .assist.open { width: min(560px, 94vw); }
+  .map-toolbar { right: 320px; }
+  .map-panel { width: 290px; }
+}
+@media (max-width: 1100px) { .netmap.embedded { height: 480px; } }

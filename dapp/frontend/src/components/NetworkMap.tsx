@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, ZoomControl, useMap } from "react-leaflet";
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { AlertTriangle, Bot, Building2, Hospital, Stethoscope, Thermometer, Truck, Warehouse, X } from "lucide-react";
+import { AlertTriangle, Bot, X } from "lucide-react";
 import { getJSON, type MapFacility, type MapRoute, type MapSite, type NetworkMap as MapData } from "../api";
 
 // Theme colors (mirror styles.css variables; Leaflet paths need literal values)
@@ -16,10 +16,10 @@ const C = {
   dim: "#4a5f73",
 };
 
-const VIEWS: Record<string, { label: string; bounds: LatLngBoundsExpression }> = {
-  us: { label: "United States", bounds: [[24.5, -125], [49.5, -66.5]] },
-  ne: { label: "Northeast", bounds: [[38.6, -80.5], [43.2, -70.5]] },
-  nyc: { label: "NYC metro", bounds: [[40.5, -74.3], [41.1, -73.5]] },
+const VIEWS: Record<string, { label: string; short: string; bounds: LatLngBoundsExpression }> = {
+  us: { label: "United States", short: "US", bounds: [[24.5, -125], [49.5, -66.5]] },
+  ne: { label: "Northeast", short: "Northeast", bounds: [[38.6, -80.5], [43.2, -70.5]] },
+  nyc: { label: "NYC metro", short: "NYC", bounds: [[40.5, -74.3], [41.1, -73.5]] },
 };
 
 type Layers = {
@@ -37,6 +37,8 @@ type Selected =
   | null;
 
 const nf = new Intl.NumberFormat("en-US");
+// Short list on small screens so the floating card never needs its own scroll.
+const HOT_LIMIT = typeof window !== "undefined" && window.innerHeight < 900 ? 3 : 4;
 
 function facilityColor(f: MapFacility) {
   if (f.excursions > 0 || f.procedures_at_risk > 0) return C.coral;
@@ -54,11 +56,12 @@ function isRisk(r: MapRoute) {
   return r.status === "Delayed" || r.excursion || r.misses_procedure;
 }
 
-function FitView({ view }: { view: string }) {
+/** Fit the view, leaving room on the right for the floating panel so nothing hides under it. */
+function FitView({ view, rightPad }: { view: string; rightPad: number }) {
   const map = useMap();
   useEffect(() => {
-    map.flyToBounds(VIEWS[view].bounds, { duration: 0.8, padding: [20, 20] });
-  }, [view, map]);
+    map.flyToBounds(VIEWS[view].bounds, { duration: 0.8, paddingTopLeft: [20, 56], paddingBottomRight: [rightPad, 20] });
+  }, [view, rightPad, map]);
   return null;
 }
 
@@ -144,103 +147,13 @@ export default function NetworkMap({
   );
 
   const toggle = (k: Exclude<keyof Layers, "routes">) => setLayers((l) => ({ ...l, [k]: !l[k] }));
-  const s = data?.summary;
+
+  const [panelOpen, setPanelOpen] = useState(true);
 
   return (
     <div className={`netmap ${embedded ? "embedded" : ""}`}>
-      <aside className="netmap-side">
-        <div>
-          <div className="lbl teal">NETWORK MAP</div>
-          <h2 className="netmap-title">Supply centers &amp; care sites</h2>
-        </div>
-
-        {error && <div className="notice">Map data unavailable: {error}</div>}
-
-        {!embedded && (
-        <div className="netmap-kpis">
-          <MiniKpi icon={<Warehouse size={13} />} label="Supply centers" value={s?.supply_centers} tone="teal" />
-          <MiniKpi icon={<Building2 size={13} />} label="Distribution" value={s?.distribution_centers} tone="blue" />
-          <MiniKpi icon={<Hospital size={13} />} label="Hospitals" value={s?.hospitals} />
-          <MiniKpi icon={<Stethoscope size={13} />} label="Clinics" value={s?.clinics} />
-          <MiniKpi icon={<Truck size={13} />} label="Delayed" value={s?.delayed} tone="amber" />
-          <MiniKpi icon={<Thermometer size={13} />} label="Excursions" value={s?.excursions} tone="coral" />
-        </div>
-        )}
-
-        <div className="card tight">
-          <div className="lbl">VIEW</div>
-          <div className="seg">
-            {Object.entries(VIEWS).map(([k, v]) => (
-              <button key={k} className={view === k ? "on" : ""} onClick={() => setView(k)}>
-                {v.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="lbl" style={{ marginTop: 12 }}>LAYERS</div>
-          <div className="layer-list">
-            <LayerToggle on={layers.supply} onClick={() => toggle("supply")} color={C.teal} square label="Supply centers" />
-            <LayerToggle on={layers.dc} onClick={() => toggle("dc")} color={C.blue} square label="Distribution centers" />
-            <LayerToggle on={layers.hospital} onClick={() => toggle("hospital")} color={C.soft} label="Hospitals" />
-            <LayerToggle on={layers.clinic} onClick={() => toggle("clinic")} color={C.soft} small label="Clinics" />
-          </div>
-
-          <div className="lbl" style={{ marginTop: 12 }}>SHIPMENT ROUTES</div>
-          {statusFilter && <div className="muted" style={{ fontSize: 11.5, margin: "4px 0 6px" }}>Showing {statusFilter} routes (status chip)</div>}
-          <div className="seg">
-            {(["off", "risk", "all"] as const).map((k) => (
-              <button key={k} className={layers.routes === k ? "on" : ""} onClick={() => setLayers((l) => ({ ...l, routes: k }))}>
-                {k === "off" ? "Hide" : k === "risk" ? "At risk" : "All active"}
-              </button>
-            ))}
-          </div>
-
-          <div className="legend">
-            <span><i style={{ background: C.coral }} /> Excursion / surgery at risk</span>
-            <span><i style={{ background: C.amber }} /> Delayed</span>
-            <span><i style={{ background: C.ok }} /> On track</span>
-          </div>
-        </div>
-
-        {selected ? (
-          <Details sel={selected} facilityById={facilityById} onClose={() => setSelected(null)} onAskRoute={onAskRoute} />
-        ) : (
-          <div className="card tight">
-            <div className="lbl coral">
-              <AlertTriangle size={11} style={{ verticalAlign: -1 }} /> SURGERIES AT RISK
-            </div>
-            {!data ? (
-              <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>Loading…</div>
-            ) : hotList.length === 0 ? (
-              <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>No procedure-critical risks.</div>
-            ) : (
-              <ul className="hot-list">
-                {hotList.slice(0, 8).map((r) => (
-                  <li
-                    key={r.shipment_id}
-                    onClick={() => {
-                      setSelected({ kind: "route", item: r });
-                      setFlyTarget([r.destination_latitude, r.destination_longitude]);
-                    }}
-                  >
-                    <div className="hl-top">
-                      <span className="mono">{r.shipment_id}</span>
-                      <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: needed for a scheduled procedure, ship immediately" : undefined}>{r.priority}</span>
-                    </div>
-                    <div className="hl-main">{r.product_name} → {facilityById[r.destination_facility_id]?.facility_name ?? r.destination}</div>
-                    <div className="hl-sub">
-                      {r.misses_procedure ? `ETA ${r.eta_date} · surgery ${r.procedure_date}` : `${r.last_recorded_temp_f}°F sensor · max ${r.temperature_max_f}°F`}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </aside>
-
       <div className="netmap-canvas">
-        <MapContainer bounds={VIEWS.us.bounds} zoomControl={true} preferCanvas={true} style={{ height: "100%", width: "100%" }}>
+        <MapContainer zoomSnap={0.25} zoomDelta={0.5} bounds={VIEWS.us.bounds} boundsOptions={{ paddingTopLeft: [20, 56], paddingBottomRight: [340, 20] }} zoomControl={false} preferCanvas={true} style={{ height: "100%", width: "100%" }}>
           {/* Esri dark gray canvas: keyless (CARTO now requires an API key from browsers) */}
           <TileLayer
             attribution="Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors"
@@ -251,8 +164,9 @@ export default function NetworkMap({
             url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
             maxZoom={16}
           />
+          <ZoomControl position="bottomright" />
           <AutoResize />
-          <FitView view={view} />
+          <FitView view={view} rightPad={panelOpen || selected ? 340 : 20} />
           <FlyTo target={flyTarget} />
 
           {routes.map((r) => (
@@ -310,16 +224,92 @@ export default function NetworkMap({
               );
             })}
         </MapContainer>
-      </div>
-    </div>
-  );
-}
 
-function MiniKpi({ icon, label, value, tone }: { icon: ReactNode; label: string; value?: number; tone?: string }) {
-  return (
-    <div className="mini-kpi">
-      <div className={`lbl ${tone ?? ""}`}>{icon} {label}</div>
-      <div className={`v ${tone ?? ""}`}>{value == null ? "—" : nf.format(value)}</div>
+        {/* Overlays sit beside the Leaflet container (not inside it), so clicks and scrolls on them never pan the map. */}
+        <div className="map-ov map-toolbar">
+          <div className="ov-group">
+            <span className="ov-lbl">View</span>
+            <div className="seg">
+              {Object.entries(VIEWS).map(([k, v]) => (
+                <button key={k} className={view === k ? "on" : ""} onClick={() => setView(k)}>
+                  {v.short}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ov-group">
+            <span className="ov-lbl">Routes</span>
+            <div className="seg">
+              {(["off", "risk", "all"] as const).map((k) => (
+                <button key={k} className={!statusFilter && layers.routes === k ? "on" : ""} onClick={() => setLayers((l) => ({ ...l, routes: k }))} disabled={!!statusFilter}>
+                  {k === "off" ? "Hide" : k === "risk" ? "At risk" : "All"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ov-group layers">
+            <LayerToggle on={layers.supply} onClick={() => toggle("supply")} color={C.teal} square label="Supply" />
+            <LayerToggle on={layers.dc} onClick={() => toggle("dc")} color={C.blue} square label="DCs" />
+            <LayerToggle on={layers.hospital} onClick={() => toggle("hospital")} color={C.soft} label="Hospitals" />
+            <LayerToggle on={layers.clinic} onClick={() => toggle("clinic")} color={C.soft} small label="Clinics" />
+          </div>
+          {statusFilter && <div className="ov-note">Showing {statusFilter} routes</div>}
+        </div>
+
+        <div className="map-ov map-legend">
+          <span><i style={{ background: C.coral }} /> Excursion / surgery at risk</span>
+          <span><i style={{ background: C.amber }} /> Delayed</span>
+          <span><i style={{ background: C.ok }} /> On track</span>
+        </div>
+
+        {error && <div className="map-ov map-error">Map data unavailable: {error}</div>}
+
+        <div className={`map-ov map-panel ${panelOpen || selected ? "" : "collapsed"}`}>
+          {selected ? (
+            <Details sel={selected} facilityById={facilityById} onClose={() => setSelected(null)} onAskRoute={onAskRoute} />
+          ) : panelOpen ? (
+            <div className="card tight">
+              <button className="close" onClick={() => setPanelOpen(false)} aria-label="Hide surgeries at risk">
+                <X size={14} />
+              </button>
+              <div className="lbl coral">
+                <AlertTriangle size={11} style={{ verticalAlign: -1 }} /> SURGERIES AT RISK
+              </div>
+              {!data ? (
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>Loading…</div>
+              ) : hotList.length === 0 ? (
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>No procedure-critical risks.</div>
+              ) : (
+                <ul className="hot-list">
+                  {hotList.slice(0, HOT_LIMIT).map((r) => (
+                    <li
+                      key={r.shipment_id}
+                      onClick={() => {
+                        setSelected({ kind: "route", item: r });
+                        setFlyTarget([r.destination_latitude, r.destination_longitude]);
+                      }}
+                    >
+                      <div className="hl-top">
+                        <span className="mono">{r.shipment_id}</span>
+                        <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: needed for a scheduled procedure, ship immediately" : undefined}>{r.priority}</span>
+                      </div>
+                      <div className="hl-main">{r.product_name} → {facilityById[r.destination_facility_id]?.facility_name ?? r.destination}</div>
+                      <div className="hl-sub">
+                        {r.misses_procedure ? `ETA ${r.eta_date} · surgery ${r.procedure_date}` : `${r.last_recorded_temp_f}°F sensor · max ${r.temperature_max_f}°F`}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {hotList.length > HOT_LIMIT && <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>+{hotList.length - HOT_LIMIT} more in the table below</div>}
+            </div>
+          ) : (
+            <button className="ov-reopen" onClick={() => setPanelOpen(true)}>
+              <AlertTriangle size={12} /> Surgeries at risk ({hotList.length})
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

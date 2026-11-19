@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookOpen, Bot, ExternalLink, Mic, Network, Sparkles, Workflow } from "lucide-react";
 import { getJSON, type Health } from "./api";
 import CommandCenter from "./components/CommandCenter";
@@ -14,6 +14,18 @@ export default function App() {
   const [assistOpen, setAssistOpen] = useState(false);
   const [assistTab, setAssistTab] = useState<AssistTab>("agent");
   const [pending, setPending] = useState<{ id: number; text: string } | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  // The header is sticky; publish its height so the drawer and table header can stick just below it.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() =>
+      document.documentElement.style.setProperty("--topbar-h", `${el.getBoundingClientRect().height}px`),
+    );
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     getJSON<Health>("/api/health")
@@ -26,7 +38,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
+      <header className="topbar" ref={headerRef}>
         <div className="brand">
           <div className="eyebrow">
             <span className={`dot ${agentOn ? "" : "off"}`} />
@@ -43,20 +55,20 @@ export default function App() {
             title="Open the SA talk track and FAQs in a small window"
             onClick={() => window.open("/talk-track.html", "ww-talk-track", "popup,width=560,height=820,left=40,top=60")}
           >
-            <Mic size={13} /> Talk Track
+            <Mic size={13} /> <span className="bl">Talk Track</span>
           </button>
-          <button className="btn" onClick={() => setModal("ps")}>
-            <BookOpen size={13} /> Problem &amp; Solution
+          <button className="btn" onClick={() => setModal("ps")} title="Problem & Solution">
+            <BookOpen size={13} /> <span className="bl shrink">Problem &amp; Solution</span>
           </button>
-          <button className="btn" onClick={() => setModal("om")}>
-            <Network size={13} /> Outcome Maps
+          <button className="btn" onClick={() => setModal("om")} title="Outcome Maps">
+            <Network size={13} /> <span className="bl shrink">Outcome Maps</span>
           </button>
-          <button className="btn" onClick={() => setModal("flow")}>
-            <Workflow size={13} /> Data Flow
+          <button className="btn" onClick={() => setModal("flow")} title="Data Flow">
+            <Workflow size={13} /> <span className="bl shrink">Data Flow</span>
           </button>
           {health?.genie_one_url && (
             <a className="btn genie" href={health.genie_one_url} target="_blank" rel="noopener noreferrer" title="Open Genie One in Databricks (new tab)">
-              <Sparkles size={13} /> Genie One <ExternalLink size={11} />
+              <Sparkles size={13} /> <span className="bl">Genie One</span> <ExternalLink size={11} />
             </a>
           )}
           <button className={`btn coral-solid ${assistOpen ? "active" : ""}`} onClick={() => setAssistOpen((o) => !o)}>
@@ -92,12 +104,7 @@ export default function App() {
       />
       </div>
 
-      {!assistOpen && (
-        <button className="assist-fab" onClick={() => setAssistOpen(true)} aria-label="Open WeatherWise assistant">
-          <Bot size={18} />
-          <span>Ask WeatherWise</span>
-        </button>
-      )}
+
 
 
       {modal === "ps" && <ProblemSolutionModal onClose={() => setModal(null)} />}

@@ -238,8 +238,23 @@ function summarize(name: string, steps: ToolStep[]): string {
     const qty = top[h.indexOf("on_hand_qty")];
     return `${done.length} product${done.length === 1 ? "" : "s"} · nearest: ${site}${qty ? ` (${qty} units)` : ""}`;
   }
+  if (n === "get_supplier_details") {
+    const people = done.flatMap((s) => {
+      const [h, ...rest] = csvRows(s.output);
+      if (!h) return [];
+      const ci = h.indexOf("contact_name"), si = h.indexOf("supplier_name");
+      return rest.map((r) => `${r[ci]} (${r[si]})`);
+    });
+    const uniq = [...new Set(people)];
+    return uniq.length ? `${uniq.length} supplier${uniq.length === 1 ? "" : "s"} · ${uniq.slice(0, 2).join(", ")}${uniq.length > 2 ? "…" : ""}` : "No supplier found";
+  }
   if (n === "search_supplier_sops") return `${done.length} search${done.length === 1 ? "" : "es"} · SOP passages retrieved`;
-  return (done[done.length - 1].output ?? "").split("\n")[0].slice(0, 120);
+  const last = ucValue(done[done.length - 1].output);
+  if (last.format === "CSV") {
+    const n = Math.max(0, last.value.split("\n").filter(Boolean).length - 1);
+    return `${n} row${n === 1 ? "" : "s"}`;
+  }
+  return last.value.split("\n")[0].slice(0, 120);
 }
 
 type Group = { name: string; steps: ToolStep[] };
