@@ -1,0 +1,48 @@
+city,state,forecast_date,high_f,low_f,conditions,weather_alert,degrees_above_cold_chain_max
+Albany,NY,2026-11-19,50,33,"Cloudy, rain late",,4
+Atlanta,GA,2026-11-19,70,52,Sunny,,24
+Austin,TX,2026-11-19,78,58,Sunny,,32
+Baltimore,MD,2026-11-19,66,48,"Mild, humid",Warm-temperature advisory for cold chain,20
+Boise,ID,2026-11-19,40,28,Cloudy,,0
+Boston,MA,2026-11-19,55,40,"Breezy, clear",,9
+Boulder,CO,2026-11-19,26,10,Heavy snow,Winter storm warning,0
+Bronx,NY,2026-11-19,62,44,"Partly cloudy, unseasonably warm",Warm-temperature advisory for cold chain,16
+Brooklyn,NY,2026-11-19,62,44,"Partly cloudy, unseasonably warm",Warm-temperature advisory for cold chain,16
+Bryn Mawr,PA,2026-11-19,63,45,Mild,,17
+Cambridge,MA,2026-11-19,55,39,"Breezy, clear",,9
+Charlotte,NC,2026-11-19,68,48,Sunny,,22
+Chicago,IL,2026-11-19,34,25,"Snow showers, gusty",Winter weather advisory,0
+Cleveland,OH,2026-11-19,33,27,"Lake-effect snow, 6-10 in",Winter storm warning,0
+Coral Gables,FL,2026-11-19,82,71,"Humid, scattered storms",,36
+Dallas,TX,2026-11-19,74,55,Windy,,28
+Denver,CO,2026-11-19,28,12,"Heavy snow, I-70 closures",Winter storm warning,0
+Edison,NJ,2026-11-19,63,44,Partly cloudy,,17
+Evanston,IL,2026-11-19,33,24,"Snow showers, gusty",Winter weather advisory,0
+Garden City,NY,2026-11-19,60,45,Mostly sunny,,14
+Hackensack,NJ,2026-11-19,61,42,Partly cloudy,,15
+Hartford,CT,2026-11-19,56,38,Mostly sunny,,10
+Hauppauge,NY,2026-11-19,60,43,Mostly sunny,,14
+Hoboken,NJ,2026-11-19,62,45,"Partly cloudy, unseasonably warm",Warm-temperature advisory for cold chain,16
+Jersey City,NJ,2026-11-19,62,45,"Partly cloudy, unseasonably warm",Warm-temperature advisory for cold chain,16
+Los Angeles,CA,2026-11-19,72,56,Sunny,,26
+Memphis,TN,2026-11-19,66,50,Cloudy,,20
+Miami,FL,2026-11-19,82,72,"Humid, scattered storms",,36
+Mineola,NY,2026-11-19,60,45,Mostly sunny,,14
+Minneapolis,MN,2026-11-19,24,11,"Snow, blowing snow",Winter storm warning,0
+Nashville,TN,2026-11-19,63,44,Thunderstorms,Severe thunderstorm watch,17
+New Haven,CT,2026-11-19,57,40,Mostly sunny,,11
+New York,NY,2026-11-19,62,44,"Partly cloudy, unseasonably warm",Warm-temperature advisory for cold chain,16
+Newark,NJ,2026-11-19,63,45,"Partly cloudy, unseasonably warm",Warm-temperature advisory for cold chain,17
+Philadelphia,PA,2026-11-19,64,47,"Mild, light wind",Warm-temperature advisory for cold chain,18
+Phoenix,AZ,2026-11-19,80,56,Sunny,,34
+Pittsburgh,PA,2026-11-19,45,34,Rain showers,,0
+Portland,OR,2026-11-19,51,43,Heavy rain,Flood watch,5
+Providence,RI,2026-11-19,56,39,Clear,,10
+Queens,NY,2026-11-19,62,44,"Partly cloudy, unseasonably warm",Warm-temperature advisory for cold chain,16
+San Diego,CA,2026-11-19,68,55,Sunny,,22
+San Francisco,CA,2026-11-19,60,50,"Fog, then sun",,14
+Seattle,WA,2026-11-19,49,42,"Atmospheric river, heavy rain",Flood watch,3
+Stamford,CT,2026-11-19,59,41,Mostly sunny,,13
+Washington,DC,2026-11-19,67,49,"Mild, humid",Warm-temperature advisory for cold chain,21
+White Plains,NY,2026-11-19,60,41,Partly cloudy,,14
+Yonkers,NY,2026-11-19,61,42,Partly cloudy,,15

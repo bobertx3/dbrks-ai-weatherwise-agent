@@ -7,6 +7,8 @@ RECIPIENT=""
 ## To send SMS, using Twilio
 SMS_ACCOUNT_SID=""
 SMS_AUTH_TOKEN=""
+# Only when SMS_ACCOUNT_SID is an API key (SK...): the AC... account SID
+SMS_ACCOUNT_ID=""
 
 ## Catalog and Schema
 TARGET_CATALOG="bldemos"
