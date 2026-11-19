@@ -2,6 +2,8 @@ from typing import Any, Generator, Optional
 import os
 import json
 import uuid
+import contextvars
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
@@ -35,7 +37,11 @@ from mlflow.types.responses import (
 
 mlflow.langchain.autolog()
 
-client = DatabricksFunctionClient(disable_notice=True)
+# Run UC functions as SQL statements on the warehouse (~1s each) instead of starting a
+# serverless Spark session on the first call (15-25s per serving container).
+WAREHOUSE_ID = os.environ.get("WAREHOUSE_ID")
+client = (DatabricksFunctionClient(disable_notice=True, warehouse_id=WAREHOUSE_ID)
+          if WAREHOUSE_ID else DatabricksFunctionClient(disable_notice=True))
 set_uc_function_client(client)
 
 ############################################
@@ -360,6 +366,16 @@ def _responses_input_to_chat_messages(input_items) -> list[dict[str, str]]:
     return messages
 
 
+def _run_tool(call) -> str:
+    name = call.get("name")
+    tool = _TOOLS_BY_NAME.get(name)
+    try:
+        obs = tool.invoke(call.get("args", {})) if tool else f"Unknown tool: {name}"
+    except Exception as e:  # surface tool errors back to the model
+        obs = f"Error calling tool {name}: {e}"
+    return _to_text(obs)
+
+
 class ToolCallingResponsesAgent(ResponsesAgent):
     def predict(self, request: ResponsesAgentRequest) -> ResponsesAgentResponse:
         outputs = [
@@ -413,22 +429,29 @@ class ToolCallingResponsesAgent(ResponsesAgent):
                     ),
                 )
 
+            # Run this turn's tool calls in parallel. Each output streams as soon as its tool
+            # finishes (the UI matches outputs to cards by call_id); the model gets the results
+            # back in the order it asked for them. copy_context() keeps the MLflow trace context
+            # so tool spans stay nested under this request's trace.
+            results: dict[str, str] = {}
+            with ThreadPoolExecutor(max_workers=min(8, len(tool_calls))) as pool:
+                futures = {
+                    pool.submit(contextvars.copy_context().run, _run_tool, call): call
+                    for call in tool_calls
+                }
+                for fut in as_completed(futures):
+                    call = futures[fut]
+                    obs = fut.result()
+                    results[call.get("id")] = obs
+                    yield ResponsesAgentStreamEvent(
+                        type="response.output_item.done",
+                        item=self.create_function_call_output_item(
+                            call_id=call.get("id"), output=obs
+                        ),
+                    )
             for call in tool_calls:
-                name = call.get("name")
-                tool = _TOOLS_BY_NAME.get(name)
-                try:
-                    obs = tool.invoke(call.get("args", {})) if tool else f"Unknown tool: {name}"
-                except Exception as e:  # surface tool errors back to the model
-                    obs = f"Error calling tool {name}: {e}"
-                obs = _to_text(obs)
                 messages.append(
-                    ToolMessage(content=obs, name=name, tool_call_id=call.get("id"))
-                )
-                yield ResponsesAgentStreamEvent(
-                    type="response.output_item.done",
-                    item=self.create_function_call_output_item(
-                        call_id=call.get("id"), output=obs
-                    ),
+                    ToolMessage(content=results[call.get("id")], name=call.get("name"), tool_call_id=call.get("id"))
                 )
 
 
