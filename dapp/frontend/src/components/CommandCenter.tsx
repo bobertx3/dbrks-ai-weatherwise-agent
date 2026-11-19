@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bot } from "lucide-react";
 import { getJSON, type MapRoute, type NetworkMap as MapData, type Overview } from "../api";
 import NetworkMap from "./NetworkMap";
-import { BarRow, Kpi, Skeleton } from "./Dashboard";
+import InventoryGrid from "./InventoryGrid";
+import { Kpi, Skeleton } from "./Dashboard";
 
 const STATUS_ORDER = ["In-Transit", "Delayed", "Out-for-Delivery", "Label-Create", "Delivered"];
 const STATUS_TONE: Record<string, string> = { "In-Transit": "var(--teal)", Delayed: "var(--coral)", "Out-for-Delivery": "var(--blue)", "Label-Create": "var(--soft)", Delivered: "var(--muted)" };
@@ -80,7 +81,6 @@ export default function CommandCenter({
         .sort((a, b) => (STATUS_ORDER.indexOf(a.status) + 1 || 99) - (STATUS_ORDER.indexOf(b.status) + 1 || 99)),
     [overview],
   );
-  const siteMax = Math.max(1, ...(overview?.inventory_by_site.map((s) => s.on_hand_units) ?? [1]));
 
   function pick(r: MapRoute) {
     setFocus({ ...r }); // new object so re-picking the same row re-flies
@@ -154,11 +154,10 @@ export default function CommandCenter({
               <thead>
                 <tr>
                   <th>Shipment</th>
-                  <th>Product</th>
-                  <th>Route</th>
+                  <th>Product · route</th>
                   <th>Status</th>
                   <th title="STAT: needed for a scheduled procedure, ship immediately">Priority</th>
-                  <th>ETA</th>
+                  <th className="col-eta">ETA</th>
                   <th>Surgery</th>
                   <th className="num">Sensor °F</th>
                   <th aria-label="Ask agent" />
@@ -168,9 +167,11 @@ export default function CommandCenter({
                 {(showAll ? rows : rows.slice(0, ROW_LIMIT)).map((r) => (
                   <tr key={r.shipment_id} className={focus?.shipment_id === r.shipment_id ? "sel" : ""} onClick={() => pick(r)}>
                     <td className="mono teal">{r.shipment_id}</td>
-                    <td>{r.product_name}</td>
-                    <td className="route">{r.origin} → {r.destination}</td>
-                    <td>
+                    <td className="prod" title={`${r.product_name}\n${r.origin} → ${r.destination}`}>
+                      <div className="p-name">{r.product_name}</div>
+                      <div className="p-route">{r.origin} → {r.destination}</div>
+                    </td>
+                    <td className="status">
                       <span className={`tag ${r.status === "Delayed" ? "delayed" : r.status === "In-Transit" ? "transit" : ""}`}>{r.status}</span>
                       {r.status === "Delayed" && r.delay_hours > 0 && <span className="muted small"> +{r.delay_hours}h</span>}
                     </td>
@@ -179,7 +180,7 @@ export default function CommandCenter({
                         {r.priority}
                       </span>
                     </td>
-                    <td className="mono">{String(r.eta_date).slice(0, 10)}</td>
+                    <td className="mono col-eta">{String(r.eta_date).slice(0, 10)}</td>
                     <td className={`mono ${r.misses_procedure ? "miss" : ""}`} title={r.misses_procedure ? "Arrives after the procedure" : undefined}>
                       {r.procedure_date ? String(r.procedure_date).slice(0, 10) : "—"}
                     </td>
@@ -209,19 +210,7 @@ export default function CommandCenter({
         )}
       </div>
 
-      <div className="card">
-        <div className="lbl">INVENTORY</div>
-        <h3>On-hand units by site{kpi ? ` · ${nf.format(kpi.on_hand)} total` : ""}</h3>
-        {!overview ? (
-          <Skeleton />
-        ) : (
-          <div className="bars cc-bars">
-            {overview.inventory_by_site.map((s) => (
-              <BarRow key={s.site_name} name={s.site_name} value={s.on_hand_units} max={siteMax} color="var(--teal)" />
-            ))}
-          </div>
-        )}
-      </div>
+      {!overview ? <div className="card"><Skeleton /></div> : <InventoryGrid cells={overview.inventory_matrix ?? []} />}
     </>
   );
 }

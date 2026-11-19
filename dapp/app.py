@@ -285,7 +285,17 @@ def overview() -> Dict[str, Any]:
         SELECT site_name, city, state, SUM(on_hand_qty) AS on_hand_units
         FROM {t('inventory')} GROUP BY site_name, city, state ORDER BY on_hand_units DESC, site_name, city, state
     """)
+    # Site x product grid for the Command Center inventory card (sites carry the type).
+    inv_q = """
+        SELECT i.site_id, i.site_name, i.state, s.site_type, i.product_id, i.product_name,
+               SUM(i.on_hand_qty) AS on_hand
+        FROM {inv} i LEFT JOIN {sites} s ON s.site_id = i.site_id
+        GROUP BY i.site_id, i.site_name, i.state, s.site_type, i.product_id, i.product_name
+    """
+    inv_matrix = read_rows(inv_q.format(inv=pt("inventory"), sites=pt("sites")),
+                           inv_q.format(inv=t("inventory"), sites=t("sites")))
     return {
+        "inventory_matrix": inv_matrix,
         "kpi": {**kpi, **inv},
         "status_mix": status_mix,
         "inventory_by_site": by_site,

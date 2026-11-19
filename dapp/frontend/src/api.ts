@@ -21,6 +21,7 @@ export type Overview = {
   };
   status_mix: { status: string; shipments: number }[];
   inventory_by_site: { site_name: string; city: string; state: string; on_hand_units: number }[];
+  inventory_matrix?: { site_id: string; site_name: string; state: string; site_type: string | null; product_id: string; product_name: string; on_hand: number }[];
   temp_ceiling_f: number;
 };
 

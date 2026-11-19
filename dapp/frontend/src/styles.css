@@ -703,3 +703,41 @@ html, body, #root { height: auto; min-height: 100%; }
 .pane-head { gap: 16px; }
 .pane-head > div:first-child { min-width: 0; }
 @container cc (max-width: 900px) { .pane-head > .lbl { display: none; } }
+
+/* Shipments table fits its card at any width: one-line cells, route folded under the
+   product, ETA dropped when tight. overflow-x: clip keeps it out from under the drawer
+   without creating a scroll box (so the sticky column header still works). */
+.cc-table { container-type: inline-size; container-name: cctable; overflow-x: clip; }
+.cc-table table { width: 100%; }
+.cc-table td, .cc-table th { white-space: nowrap; }
+.cc-table td.prod { max-width: 0; width: 46%; }
+.cc-table .p-name, .cc-table .p-route { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cc-table .p-name { color: var(--text); }
+.cc-table .p-route { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+.cc-table td.status .muted.small { margin-left: 4px; }
+@container cctable (max-width: 760px) { .cc-table .col-eta { display: none; } }
+@container cctable (max-width: 760px) { .cc-table .row-ask { padding: 4px 7px; font-size: 0; gap: 0; } .cc-table .row-ask svg { width: 14px; height: 14px; } }
+
+/* Inventory: site x product heat grid */
+.inv-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.inv-head h3 { margin-bottom: 0; }
+.inv-seg { margin-top: 0; }
+.inv-seg button { padding: 5px 10px; white-space: nowrap; }
+.inv-card { container-type: inline-size; }
+.inv-wrap { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.inv-grid { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.inv-grid th { white-space: normal; line-height: 1.25; text-align: center; padding: 8px 4px; vertical-align: bottom; }
+.inv-grid th.site, .inv-grid td.site { text-align: left; width: 24%; padding-left: 10px; }
+.inv-grid td.site { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.inv-grid th.tot, .inv-grid td.tot { width: 7%; text-align: right; padding-right: 10px; font-family: var(--mono); color: var(--soft); }
+.inv-grid td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.inv-grid td.cell { text-align: center; font-family: var(--mono); color: var(--text); border-left: 1px solid rgba(10, 16, 23, 0.6); }
+.inv-grid td.cell.none { color: var(--dim); }
+.inv-grid td.cell.low { background: rgba(242, 114, 94, 0.22); color: var(--coral); font-weight: 600; }
+.inv-grid tbody tr:hover td.site { color: var(--teal); }
+.inv-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 11.5px; color: var(--soft); }
+.inv-legend .sw { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.inv-legend .sw.hi { background: rgba(79, 209, 197, 0.65); }
+.inv-legend .sw.lo { background: rgba(79, 209, 197, 0.15); }
+.inv-legend .sw.low { background: rgba(242, 114, 94, 0.35); }
+@container (max-width: 760px) { .inv-grid { font-size: 11px; } .inv-grid th { font-size: 9px; letter-spacing: 0.04em; } .inv-grid th.site, .inv-grid td.site { width: 30%; } }
