@@ -599,3 +599,5 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; gap: 6
 }
 .spin { animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+.details .run-agent { width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; }

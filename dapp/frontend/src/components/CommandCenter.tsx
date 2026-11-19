@@ -119,7 +119,7 @@ export default function CommandCenter({
       </div>
 
       <div className="cc-map" ref={mapRef}>
-        <NetworkMap warehouseOk={warehouseOk} data={map} statusFilter={status} focus={focus} embedded />
+        <NetworkMap warehouseOk={warehouseOk} data={map} statusFilter={status} focus={focus} embedded onAskRoute={(r) => onAsk(askFor(r))} />
       </div>
 
       <div className="card cc-table">

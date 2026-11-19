@@ -7,7 +7,10 @@ import Markdown from "./Markdown";
 import { streamNDJSON, type ChatMessage, type ToolStep } from "../api";
 
 const STARTERS = [
+  "Are there shipments headed to NYC that are at risk due to weather excursions? If so, look up the supplier SOPs so I can resolve them, and send me a summary email with next steps, plus a short SMS if anything is urgent.",
   "Which NYC shipments are at risk tomorrow?",
+  "Are any shipments to Nashville at risk from tomorrow's weather?",
+  "Are any shipments to Evanston, Illinois at risk from tomorrow's weather?",
   "Find backup stock for the at-risk shipments.",
   "Email me the escalation steps.",
 ];

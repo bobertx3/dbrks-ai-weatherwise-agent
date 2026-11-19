@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Bot, ExternalLink, Network, Sparkles, Workflow } from "lucide-react";
+import { BookOpen, Bot, ExternalLink, Mic, Network, Sparkles, Workflow } from "lucide-react";
 import { getJSON, type Health } from "./api";
 import CommandCenter from "./components/CommandCenter";
 import AssistantDrawer, { type AssistTab } from "./components/AssistantDrawer";
@@ -38,6 +38,13 @@ export default function App() {
           <p>Temperature-controlled logistics for surgical supplies. Protect every shipment in transit and escalate before it spoils.</p>
         </div>
         <div className="actions">
+          <button
+            className="btn"
+            title="Open the SA talk track and FAQs in a small window"
+            onClick={() => window.open("/talk-track.html", "ww-talk-track", "popup,width=560,height=820,left=40,top=60")}
+          >
+            <Mic size={13} /> Talk Track
+          </button>
           <button className="btn" onClick={() => setModal("ps")}>
             <BookOpen size={13} /> Problem &amp; Solution
           </button>

@@ -666,6 +666,11 @@ if (STATIC_DIR / "assets").exists():
 def spa(full_path: str):
     if full_path.startswith("api/"):
         return JSONResponse({"detail": "Not found"}, status_code=404)
+    # Plain files from the build (e.g. talk-track.html from frontend/public); everything else is the SPA.
+    if full_path:
+        candidate = (STATIC_DIR / full_path).resolve()
+        if candidate.is_file() and STATIC_DIR.resolve() in candidate.parents:
+            return FileResponse(candidate)
     index = STATIC_DIR / "index.html"
     if index.exists():
         return FileResponse(index)

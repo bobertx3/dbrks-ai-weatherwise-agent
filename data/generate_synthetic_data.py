@@ -24,7 +24,7 @@ from pathlib import Path
 OUT = Path(__file__).parent
 rng = random.Random(42)
 
-DEMO_DATE = date(2026, 11, 18)          # "today" for the demo
+DEMO_DATE = date(2026, 11, 19)          # "today" for the demo
 TOMORROW = DEMO_DATE + timedelta(days=1)  # procedure day for the NYC demo stories
 
 # --------------------------------------------------------------------------

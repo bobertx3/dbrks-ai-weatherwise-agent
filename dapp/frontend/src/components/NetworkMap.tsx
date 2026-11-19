@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, useMap } from "react-leaflet";
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { AlertTriangle, Building2, Hospital, Stethoscope, Thermometer, Truck, Warehouse, X } from "lucide-react";
+import { AlertTriangle, Bot, Building2, Hospital, Stethoscope, Thermometer, Truck, Warehouse, X } from "lucide-react";
 import { getJSON, type MapFacility, type MapRoute, type MapSite, type NetworkMap as MapData } from "../api";
 
 // Theme colors (mirror styles.css variables; Leaflet paths need literal values)
@@ -87,6 +87,7 @@ export default function NetworkMap({
   statusFilter = null,
   focus = null,
   embedded = false,
+  onAskRoute,
 }: {
   warehouseOk: boolean | null;
   /** Provide data from a parent (Command Center) to skip this component's own fetch. */
@@ -97,6 +98,8 @@ export default function NetworkMap({
   focus?: MapRoute | null;
   /** Embedded in the Command Center: fixed height, no duplicate KPI tiles. */
   embedded?: boolean;
+  /** "Run agent" on a selected shipment (opens the assistant drawer with a prompt). */
+  onAskRoute?: (r: MapRoute) => void;
 }) {
   const [ownData, setData] = useState<MapData | null>(null);
   const data = dataProp !== undefined ? dataProp : ownData;
@@ -200,7 +203,7 @@ export default function NetworkMap({
         </div>
 
         {selected ? (
-          <Details sel={selected} facilityById={facilityById} onClose={() => setSelected(null)} />
+          <Details sel={selected} facilityById={facilityById} onClose={() => setSelected(null)} onAskRoute={onAskRoute} />
         ) : (
           <div className="card tight">
             <div className="lbl coral">
@@ -347,7 +350,7 @@ function Row({ k, v, tone }: { k: string; v: ReactNode; tone?: string }) {
   );
 }
 
-function Details({ sel, facilityById, onClose }: { sel: NonNullable<Selected>; facilityById: Record<string, MapFacility>; onClose: () => void }) {
+function Details({ sel, facilityById, onClose, onAskRoute }: { sel: NonNullable<Selected>; facilityById: Record<string, MapFacility>; onClose: () => void; onAskRoute?: (r: MapRoute) => void }) {
   return (
     <div className="card tight details">
       <button className="close" onClick={onClose} aria-label="Close">
@@ -396,6 +399,11 @@ function Details({ sel, facilityById, onClose }: { sel: NonNullable<Selected>; f
             tone={sel.item.excursion ? "coral" : undefined}
           />
           <Row k="Distance" v={`${nf.format(sel.item.route_miles)} mi`} />
+          {onAskRoute && (
+            <button className="btn coral-solid run-agent" onClick={() => onAskRoute(sel.item)}>
+              <Bot size={14} /> Run agent on {sel.item.shipment_id}
+            </button>
+          )}
         </>
       )}
     </div>
