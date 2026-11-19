@@ -19,6 +19,8 @@ env:
     valueFrom: sql-warehouse
   - name: GENIE_SPACE_ID
     valueFrom: genie-space
+  - name: DASHBOARD_ID          # AI/BI dashboard "WeatherWise Supply Chain Insights"
+    value: "01f1e3e798ea1221aa5ad56a385cf613"
   # Lakebase endpoint path used to mint OAuth database credentials (enables the Lakebase read path)
   - name: LAKEBASE_ENDPOINT
     valueFrom: postgres

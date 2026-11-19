@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, Bot, ExternalLink, Mic, Network, Sparkles, Workflow } from "lucide-react";
+import { BookOpen, Bot, ExternalLink, LayoutDashboard, Mic, Network, Sparkles, Workflow } from "lucide-react";
 import { getJSON, type Health } from "./api";
 import CommandCenter from "./components/CommandCenter";
 import AssistantDrawer, { type AssistTab } from "./components/AssistantDrawer";
@@ -66,6 +66,11 @@ export default function App() {
           <button className="btn" onClick={() => setModal("flow")} title="Data Flow">
             <Workflow size={13} /> <span className="bl shrink">Data Flow</span>
           </button>
+          {health?.dashboard_url && (
+            <a className="btn" href={health.dashboard_url} target="_blank" rel="noopener noreferrer" title="Open the WeatherWise AI/BI dashboard (new tab)">
+              <LayoutDashboard size={13} /> <span className="bl shrink">Dashboard</span> <ExternalLink size={11} />
+            </a>
+          )}
           {health?.genie_one_url && (
             <a className="btn genie" href={health.genie_one_url} target="_blank" rel="noopener noreferrer" title="Open Genie One in Databricks (new tab)">
               <Sparkles size={13} /> <span className="bl">Genie One</span> <ExternalLink size={11} />

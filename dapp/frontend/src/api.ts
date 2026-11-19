@@ -8,6 +8,7 @@ export type Health = {
   user: string | null;
   /** Genie One / Genie space link for the header button (null hides it). */
   genie_one_url?: string | null;
+  dashboard_url?: string | null;
 };
 
 export type Overview = {

@@ -232,6 +232,17 @@ def _genie_one_url() -> Optional[str]:
     return f"{host}/one" + (f"?o={ws_id}" if ws_id else "")
 
 
+def _dashboard_url() -> Optional[str]:
+    """Published AI/BI dashboard: <DATABRICKS_HOST>/dashboardsv3/<DASHBOARD_ID>/published."""
+    dash = os.getenv("DASHBOARD_ID", "").strip()
+    host = (os.getenv("DATABRICKS_HOST") or "").strip().rstrip("/")
+    if not dash or not host:
+        return None
+    if not host.startswith(("https://", "http://")):
+        host = "https://" + host
+    return f"{host}/dashboardsv3/{dash}/published"
+
+
 @app.get("/api/health")
 def health(request: Request) -> Dict[str, Any]:
     return {
@@ -242,6 +253,7 @@ def health(request: Request) -> Dict[str, Any]:
         "agent_configured": bool(SERVING_ENDPOINT),
         "temp_ceiling_f": TEMP_CEILING_F,
         "genie_one_url": _genie_one_url(),
+        "dashboard_url": _dashboard_url(),
         "user": request.headers.get("x-forwarded-email") or request.headers.get("x-forwarded-user"),
     }
 

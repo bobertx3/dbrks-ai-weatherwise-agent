@@ -367,3 +367,13 @@ Local development: run `uvicorn app:app --port 8000` in `dapp/` (with `WAREHOUSE
 ---
 
 © 2025 — *Authored by Bobby Leach*
+
+## AI/BI dashboard
+
+`dashboards/weatherwise_insights.lvdash.json` is the **WeatherWise Supply Chain Insights** dashboard (KPIs, arrivals by status, delay causes, excursions by product, delays by carrier, destination map, backup-stock heatmap, at-risk table; global filters for priority, carrier, product and state; linked to the Genie space). The app's **Dashboard** button opens the published version (`DASHBOARD_ID` in `dapp/app.yaml`).
+
+```bash
+databricks lakeview update <DASHBOARD_ID> --dataset-catalog bldemos --dataset-schema agentbricks_weatherwise \
+  --serialized-dashboard "$(cat dashboards/weatherwise_insights.lvdash.json)" --profile DEFAULT
+databricks lakeview publish <DASHBOARD_ID> --warehouse-id <WAREHOUSE_ID> --profile DEFAULT
+```
