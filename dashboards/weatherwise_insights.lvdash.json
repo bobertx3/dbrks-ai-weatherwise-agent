@@ -79,10 +79,6 @@
                     {
                       "name": "sum(is_active)",
                       "expression": "SUM(`is_active`)"
-                    },
-                    {
-                      "name": "daily(eta_date)",
-                      "expression": "DATE_TRUNC(\"DAY\", `eta_date`)"
                     }
                   ],
                   "disaggregated": false
@@ -96,9 +92,6 @@
                 "value": {
                   "fieldName": "sum(is_active)",
                   "displayName": "Active shipments"
-                },
-                "period": {
-                  "fieldName": "daily(eta_date)"
                 }
               },
               "frame": {
@@ -128,10 +121,6 @@
                     {
                       "name": "sum(is_delayed)",
                       "expression": "SUM(`is_delayed`)"
-                    },
-                    {
-                      "name": "daily(eta_date)",
-                      "expression": "DATE_TRUNC(\"DAY\", `eta_date`)"
                     }
                   ],
                   "disaggregated": false
@@ -145,9 +134,6 @@
                 "value": {
                   "fieldName": "sum(is_delayed)",
                   "displayName": "Delayed"
-                },
-                "period": {
-                  "fieldName": "daily(eta_date)"
                 }
               },
               "frame": {
@@ -177,10 +163,6 @@
                     {
                       "name": "sum(is_excursion)",
                       "expression": "SUM(`is_excursion`)"
-                    },
-                    {
-                      "name": "daily(eta_date)",
-                      "expression": "DATE_TRUNC(\"DAY\", `eta_date`)"
                     }
                   ],
                   "disaggregated": false
@@ -194,9 +176,6 @@
                 "value": {
                   "fieldName": "sum(is_excursion)",
                   "displayName": "Temperature excursions"
-                },
-                "period": {
-                  "fieldName": "daily(eta_date)"
                 }
               },
               "frame": {
@@ -226,10 +205,6 @@
                     {
                       "name": "sum(misses_surgery)",
                       "expression": "SUM(`misses_surgery`)"
-                    },
-                    {
-                      "name": "daily(eta_date)",
-                      "expression": "DATE_TRUNC(\"DAY\", `eta_date`)"
                     }
                   ],
                   "disaggregated": false
@@ -243,9 +218,6 @@
                 "value": {
                   "fieldName": "sum(misses_surgery)",
                   "displayName": "Surgeries at risk"
-                },
-                "period": {
-                  "fieldName": "daily(eta_date)"
                 }
               },
               "frame": {
