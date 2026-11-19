@@ -690,3 +690,16 @@ html, body, #root { height: auto; min-height: 100%; }
   .map-panel { width: 290px; }
 }
 @media (max-width: 1100px) { .netmap.embedded { height: 480px; } }
+
+/* KPI tiles: even rows (6 → 3 → 2 columns) based on the Command Center's own width,
+   so opening the drawer or zooming never leaves a lone tile. Labels stay on one line. */
+.command { container-type: inline-size; container-name: cc; }
+.command .kpis { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@container cc (max-width: 980px) { .command .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container cc (max-width: 520px) { .command .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.command .kpi .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.08em; }
+.command .kpi .cap { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pane-head h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pane-head { gap: 16px; }
+.pane-head > div:first-child { min-width: 0; }
+@container cc (max-width: 900px) { .pane-head > .lbl { display: none; } }

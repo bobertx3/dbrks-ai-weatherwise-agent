@@ -112,7 +112,7 @@ export default function CommandCenter({
               onClick={() => setStatus((s) => (s === t.status ? null : t.status))}
               title={active ? `Filter to ${t.status}` : undefined}
             >
-              <div className="lbl">{t.status.toUpperCase()}</div>
+              <div className="lbl" title={t.status}>{t.status.replace(/-/g, " ").toUpperCase()}</div>
               <div className="v" style={{ color: STATUS_TONE[t.status] ?? "var(--text)" }}>{nf.format(t.shipments)}</div>
               <div className="cap">{active ? (status === t.status ? "filtering · click to clear" : "click to filter") : "complete"}</div>
             </button>
