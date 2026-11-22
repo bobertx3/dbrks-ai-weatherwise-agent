@@ -4,17 +4,26 @@ import {
   RotateCcw, Send, Thermometer, Warehouse,
 } from "lucide-react";
 import Markdown from "./Markdown";
-import { streamNDJSON, type ChatMessage, type ToolStep } from "../api";
+import { getJSON, streamNDJSON, type ChatMessage, type ToolStep, type WeatherHotspots } from "../api";
 
-const STARTERS = [
-  "Are there shipments headed to NYC that are at risk due to weather excursions? If so, look up the supplier SOPs so I can resolve them, and send me a summary email with next steps, plus a short SMS if anything is urgent.",
-  "Is tomorrow's weather putting any shipments headed to Nashville at risk? If so, look up the supplier SOPs so I can resolve them, and send me a summary email with next steps, plus a short SMS if anything is urgent.",
-  "Which NYC shipments are at risk tomorrow?",
-  "Are any shipments to Nashville at risk from tomorrow's weather?",
-  "Are any shipments to Evanston, Illinois at risk from tomorrow's weather?",
-  "Find backup stock for the at-risk shipments.",
-  "Email me the escalation steps.",
-];
+const ONE_SHOT_TAIL =
+  "If so, look up the supplier SOPs so I can resolve them, and send me a summary email with next steps, plus a short SMS if anything is urgent.";
+
+/** Starter prompts. The forecast ones use today's weather hot spots (fallback: Nashville / Evanston). */
+function starters(hs: WeatherHotspots | null): string[] {
+  const warm = hs?.warm?.city ?? hs?.top?.city ?? "Nashville";
+  const cold = hs?.cold?.city ?? "Evanston, Illinois";
+  const top = hs?.top?.city ?? warm;
+  return [
+    `Are there shipments headed to NYC that are at risk due to weather excursions? ${ONE_SHOT_TAIL}`,
+    `Is the weather putting any shipments headed to ${top} at risk when they arrive? ${ONE_SHOT_TAIL}`,
+    "Which NYC shipments are too warm or too cold right now?",
+    `Are any shipments to ${warm} at risk from the weather when they arrive?`,
+    ...(cold !== warm ? [`Are any shipments to ${cold} at risk from the weather when they arrive?`] : []),
+    "Find backup stock for the at-risk shipments.",
+    "Email me the escalation steps.",
+  ];
+}
 
 type Turn = ChatMessage & { live?: boolean; startedAt?: number; endedAt?: number };
 
@@ -23,6 +32,10 @@ export default function AgentChat({ enabled, pending }: { enabled: boolean; pend
   const [messages, setMessages] = useState<Turn[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [hotspots, setHotspots] = useState<WeatherHotspots | null>(null);
+  useEffect(() => {
+    getJSON<WeatherHotspots>("/api/weather/hotspot").then(setHotspots).catch(() => setHotspots(null));
+  }, []);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -92,7 +105,17 @@ export default function AgentChat({ enabled, pending }: { enabled: boolean; pend
         {!enabled && <div className="notice">The agent serving endpoint is not configured.</div>}
         {messages.length === 0 && (
           <div className="suggest">
-            {STARTERS.map((s) => (
+            {(hotspots?.warm || hotspots?.cold) && (
+              <div className="hotspots">
+                <span className="lbl">TODAY'S WEATHER HOT SPOTS</span>
+                {[hotspots.warm, hotspots.cold].filter(Boolean).map((h) => (
+                  <span key={h!.destination + h!.call} className={`risk-badge ${h!.call === "TOO COLD" ? "cold" : "warm"}`} title={`${h!.product}: forecast ${h!.high_f}° / ${h!.low_f}°F on ${h!.day}`}>
+                    {h!.city} · {h!.call} {h!.gap_f > 0 ? "+" : ""}{Math.round(h!.gap_f)}°F
+                  </span>
+                ))}
+              </div>
+            )}
+            {starters(hotspots).map((s) => (
               <button key={s} onClick={() => send(s)} disabled={!enabled}>
                 {s}
               </button>

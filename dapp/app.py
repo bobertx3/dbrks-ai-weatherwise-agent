@@ -110,8 +110,27 @@ def lakebase_enabled() -> bool:
     return bool(LAKEBASE_ENDPOINT)
 
 
-def pt(name: str) -> str:
-    """Postgres name of a synced table (schema-qualified, quoted)."""
+# Shipments and inventory store dates as days from today (`*_in_days`) in their *_base tables, so the
+# demo works on any day. In UC the `shipments` / `inventory` views add those days to today; Lakebase
+# syncs the base tables, so the app does the same here (today = America/New_York, like the UC views).
+_PG_TODAY = "(now() AT TIME ZONE 'America/New_York')::date"
+_PG_RELATIVE = {
+    "shipments": ("shipments_base", ["ship", "eta", "original_eta", "procedure"], lambda c: f"{c}_date"),
+    "inventory": ("inventory_base", ["lot_expiry"], lambda c: c),
+}
+
+
+def pt(name: str, alias: bool = True) -> str:
+    """Postgres name of a synced table (schema-qualified, quoted).
+
+    shipments / inventory return a subquery over the *_base table with real dates computed from today.
+    alias=False leaves the alias to the caller (e.g. `FROM {pt('inventory', False)} i`).
+    """
+    if name in _PG_RELATIVE:
+        base, cols, out = _PG_RELATIVE[name]
+        dates = ", ".join(f"({_PG_TODAY} + b.{c}_in_days) AS {out(c)}" for c in cols)
+        sub = f'(SELECT b.*, {dates} FROM "{LAKEBASE_SCHEMA}".{base} b)'
+        return f"{sub} AS {name}" if alias else sub
     return f'"{LAKEBASE_SCHEMA}".{name}'
 
 
@@ -304,7 +323,7 @@ def overview() -> Dict[str, Any]:
         FROM {inv} i LEFT JOIN {sites} s ON s.site_id = i.site_id
         GROUP BY i.site_id, i.site_name, i.state, s.site_type, i.product_id, i.product_name
     """
-    inv_matrix = read_rows(inv_q.format(inv=pt("inventory"), sites=pt("sites")),
+    inv_matrix = read_rows(inv_q.format(inv=pt("inventory", False), sites=pt("sites")),
                            inv_q.format(inv=t("inventory"), sites=t("sites")))
     return {
         "inventory_matrix": inv_matrix,
@@ -549,6 +568,88 @@ def agent_stream(body: AgentChat):
     # X-Accel-Buffering: stop proxies from holding the stream until it ends.
     return StreamingResponse(gen(), media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+
+# ------------------------------------------------------------------------------
+# Weather hot spot: which destination's forecast is furthest outside its products' ranges
+# ------------------------------------------------------------------------------
+_WX_CACHE: Dict[str, Any] = {"at": 0.0, "data": None}
+_WX_TTL_S = 1800
+
+
+def _forecast(lat: float, lon: float) -> Dict[str, tuple]:
+    """date -> (high_f, low_f) from Open-Meteo (same source as the agent's check_weather tool)."""
+    import requests
+
+    r = requests.get("https://api.open-meteo.com/v1/forecast", params={
+        "latitude": lat, "longitude": lon, "daily": "temperature_2m_max,temperature_2m_min",
+        "temperature_unit": "fahrenheit", "timezone": "auto", "forecast_days": 7}, timeout=6)
+    r.raise_for_status()
+    d = r.json()["daily"]
+    return {day: (hi, lo) for day, hi, lo in zip(d["time"], d["temperature_2m_max"], d["temperature_2m_min"])}
+
+
+def _nearest_day(days: Dict[str, tuple], target: str) -> str:
+    if target in days:
+        return target
+    t = datetime.date.fromisoformat(target).toordinal()
+    return min(days, key=lambda x: abs(datetime.date.fromisoformat(x).toordinal() - t))
+
+
+def _weather_hotspots() -> Dict[str, Any]:
+    from concurrent.futures import ThreadPoolExecutor
+
+    q = """
+        SELECT destination, destination_latitude AS lat, destination_longitude AS lon, CAST(eta_date AS {txt}) AS eta_date,
+               temperature_min_f, temperature_max_f, product_name
+        FROM {tbl} WHERE status <> 'Delivered' AND temperature_max_f >= 32
+    """
+    ships = read_rows(q.format(txt="TEXT", tbl=pt("shipments")), q.format(txt="STRING", tbl=t("shipments")))
+    dests: Dict[str, tuple] = {}
+    for sh in ships:
+        dests.setdefault(sh["destination"], (float(sh["lat"]), float(sh["lon"])))
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futs = {d: pool.submit(_forecast, *ll) for d, ll in dests.items()}
+    fc: Dict[str, Dict[str, tuple]] = {}
+    for d, f in futs.items():
+        try:
+            fc[d] = f.result()
+        except Exception as exc:  # one city's forecast failing shouldn't sink the rest
+            logger.warning("forecast failed for %s: %s", d, exc)
+    by_city: Dict[str, Dict[str, Any]] = {}
+    for sh in ships:
+        days = fc.get(sh["destination"])
+        if not days:
+            continue
+        day = _nearest_day(days, str(sh["eta_date"])[:10])
+        hi, lo = days[day]
+        for call, gap in (("TOO WARM", hi - float(sh["temperature_max_f"])), ("TOO COLD", float(sh["temperature_min_f"]) - lo)):
+            c = by_city.setdefault(f"{sh['destination']}|{call}", {
+                "destination": sh["destination"], "city": sh["destination"].split(",")[0], "call": call,
+                "gap_f": -999.0, "at_risk": 0, "product": None, "day": None, "high_f": None, "low_f": None})
+            if gap >= 10:
+                c["at_risk"] += 1
+            if gap > c["gap_f"]:
+                c.update(gap_f=round(gap, 1), product=sh["product_name"], day=day, high_f=hi, low_f=lo)
+    ranked = sorted((c for c in by_city.values() if c["destination"] != "New York, NY" and c["gap_f"] >= 10),
+                    key=lambda c: (-c["gap_f"], -c["at_risk"]))
+    pick = {call: next((c for c in ranked if c["call"] == call), None) for call in ("TOO WARM", "TOO COLD")}
+    return {"top": ranked[0] if ranked else None, "warm": pick["TOO WARM"], "cold": pick["TOO COLD"],
+            "checked_cities": len(fc), "generated_at": datetime.datetime.utcnow().isoformat() + "Z"}
+
+
+@app.get("/api/weather/hotspot")
+def weather_hotspot() -> JSONResponse:
+    """Today's worst forecast-vs-range destinations (cached 30 min) for the agent's starter prompts."""
+    now = time.time()
+    if _WX_CACHE["data"] is None or now - _WX_CACHE["at"] > _WX_TTL_S:
+        try:
+            _WX_CACHE.update(at=now, data=_weather_hotspots())
+        except Exception as exc:
+            logger.warning("weather hotspot failed: %s", exc)
+            return JSONResponse({"top": None, "warm": None, "cold": None, "error": str(exc)[:200]})
+    return JSONResponse(_WX_CACHE["data"])
 
 
 # ──────────────────────────────────────────────────────────────────────────────

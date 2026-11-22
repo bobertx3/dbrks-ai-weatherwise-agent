@@ -181,3 +181,10 @@ export type NetworkMap = {
     procedures_at_risk: number;
   };
 };
+
+
+export type WeatherHotspot = {
+  destination: string; city: string; call: "TOO WARM" | "TOO COLD"; gap_f: number; at_risk: number;
+  product: string | null; day: string | null; high_f: number | null; low_f: number | null;
+};
+export type WeatherHotspots = { top: WeatherHotspot | null; warm: WeatherHotspot | null; cold: WeatherHotspot | null };

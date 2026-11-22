@@ -11,7 +11,7 @@ PROFILE="DEFAULT"
 if [[ "${1:-}" == "--profile" ]]; then PROFILE="${2:?profile}"; fi
 CATALOG="bldemos_lakebase"
 SCHEMA="agentbricks_weatherwise"
-TABLES="shipments sites facilities inventory"
+TABLES="shipments_base sites facilities inventory_base"  # *_base: dates stored as days from today
 TIMEOUT_S=1200
 
 state_of() {  # prints "<detailed_state> <sync_end_time> <pipeline_id>" for a synced table

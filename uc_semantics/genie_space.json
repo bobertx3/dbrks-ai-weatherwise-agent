@@ -1,6 +1,6 @@
 {
   "title": "WeatherWise Supply Chain Explorer",
-  "description": "Ask about cold-chain shipments, delays, temperature excursions, surgeries at risk, backup inventory, supply sites, hospitals/clinics, suppliers and SOPs for MedTech surgical supplies.",
+  "description": "Ask about cold-chain shipments, delays, temperature excursions (too warm / too cold), weather delays, backup inventory, supply sites, hospitals/clinics, suppliers and SOPs for MedTech surgical supplies.",
   "serialized_space": {
     "version": 2,
     "config": {
@@ -8,7 +8,7 @@
         {
           "id": "a0000000000000000000000000000001",
           "question": [
-            "Which STAT shipments to NYC will arrive after their scheduled surgery?"
+            "Which NYC shipments are too warm or too cold right now?"
           ]
         },
         {
@@ -147,14 +147,14 @@
             {
               "column_name": "priority",
               "description": [
-                "STAT (surgery same/next day), Urgent, Routine."
+                "STAT (highest), Urgent, Routine."
               ],
               "enable_format_assistance": true
             },
             {
               "column_name": "procedure_date",
               "description": [
-                "Scheduled surgery that depends on this shipment."
+                "Scheduled procedure date (not used in this demo)."
               ],
               "synonyms": [
                 "surgery date",
@@ -218,10 +218,10 @@
           "id": "b0000000000000000000000000000001",
           "content": [
             "Domain: cold-chain shipments of temperature-sensitive MedTech and surgical biologics (frozen fibrin sealant, frozen bone allograft, refrigerated thrombin hemostat, corneal grafts, bioprosthetic aortic valves, coated cardiac stents, drug-coated balloon catheters) from suppliers to hospitals and clinics.\n",
-            "For KPI questions (delay rate, excursions, procedures at risk, average delay) prefer the shipment_risk_metrics metric view and use MEASURE() on its measures.\n",
+            "For KPI questions (delay rate, excursions, average delay) prefer the shipment_risk_metrics metric view and use MEASURE() on its measures.\n",
             "Temperature excursion = last_recorded_temp_f > temperature_max_f OR last_recorded_temp_f < temperature_min_f, using that shipment's own limits. Ranges differ by product: frozen fibrin sealant -22 to -4F, frozen bone allograft -112 to -40F, refrigerated thrombin hemostat and corneal graft 36-46F (2-8C), bioprosthetic aortic valve 50-77F (never freeze), coated cardiac stent 59-77F, drug-coated balloon 59-86F. Freezing is an excursion for valves, thrombin and corneal grafts. Warming or thawing is an excursion for frozen products. Heat is the excursion for coated stents and balloons.\n",
             "Active shipment = status <> 'Delivered'. Delayed = status = 'Delayed'.\n",
-            "Surgery / procedure at risk = an active shipment whose eta_date is after its procedure_date. 'At risk with no buffer' = DATEDIFF(procedure_date, eta_date) <= 1.\n",
+            "This demo is about weather and temperature risk. Label excursions TOO WARM (above max) or TOO COLD (below min). Do not report surgeries or procedure dates unless explicitly asked.\n",
             "NYC, New York, Manhattan, Brooklyn, Queens, Bronx and Staten Island all mean shipments.destination = 'New York, NY' (or facilities.metro = 'New York, NY').\n",
             "Weather is not stored in these tables. For weather or forecast questions, say the WeatherWise agent checks live forecasts; don't infer weather from the data.\n",
             "For backup or alternate inventory, use inventory with on_hand_qty > 0, joined to sites for location; prefer lots with the latest lot_expiry and sites in the same state or metro as the destination.\n",
@@ -234,17 +234,17 @@
         {
           "id": "c0000000000000000000000000000001",
           "question": [
-            "Which STAT shipments to NYC will arrive after their scheduled surgery?"
+            "Which NYC shipments are too warm or too cold right now?"
           ],
           "sql": [
-            "SELECT s.shipment_id, s.product_name, s.destination_facility_name, s.status, s.delay_reason,\n",
-            "       s.original_eta_date, s.eta_date, s.procedure_date, s.last_recorded_temp_f\n",
+            "SELECT s.shipment_id, s.product_name, s.destination_facility_name, s.priority, s.status,\n",
+            "       s.last_recorded_temp_f, s.temperature_min_f, s.temperature_max_f,\n",
+            "       CASE WHEN s.last_recorded_temp_f > s.temperature_max_f THEN 'TOO WARM' ELSE 'TOO COLD' END AS temperature_call\n",
             "FROM __CATALOG__.__SCHEMA__.shipments s\n",
             "WHERE s.destination = 'New York, NY'\n",
-            "  AND s.priority = 'STAT'\n",
             "  AND s.status <> 'Delivered'\n",
-            "  AND s.eta_date > s.procedure_date\n",
-            "ORDER BY s.procedure_date, s.eta_date"
+            "  AND (s.last_recorded_temp_f > s.temperature_max_f OR s.last_recorded_temp_f < s.temperature_min_f)\n",
+            "ORDER BY CASE s.priority WHEN 'STAT' THEN 0 WHEN 'Urgent' THEN 1 ELSE 2 END, s.shipment_id"
           ]
         },
         {

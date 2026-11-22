@@ -384,3 +384,15 @@ databricks lakeview update <DASHBOARD_ID> --dataset-catalog bldemos --dataset-sc
   --serialized-dashboard "$(cat dashboards/weatherwise_insights.lvdash.json)" --profile DEFAULT
 databricks lakeview publish <DASHBOARD_ID> --warehouse-id <WAREHOUSE_ID> --profile DEFAULT
 ```
+
+## Runs on any day (relative dates)
+
+Shipment and inventory dates are stored as **days from today** in `shipments_base` / `inventory_base`
+(`*_in_days` columns, computed at load time from the CSVs' `DEMO_DATE` anchor in `data/setup_data.ipynb`).
+`shipments` and `inventory` are **views** that add those days to today (America/New_York), so the agent,
+UC functions, metric view, Genie and dashboard always see current dates with no refresh job. Lakebase
+syncs the `*_base` tables and the app does the same date math in its Postgres queries (`pt()` in `dapp/app.py`).
+
+Weather is live, so the agent panel's forecast prompts use **today's weather hot spots**
+(`/api/weather/hotspot`): the destinations whose forecast is furthest outside their products' ranges.
+
