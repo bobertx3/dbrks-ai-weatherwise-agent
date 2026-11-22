@@ -826,3 +826,26 @@ html, body, #root { height: auto; min-height: 100%; }
 @media (min-width: 721px) and (max-width: 1300px) {
   .assist { height: calc(100dvh - var(--topbar-h)) !important; max-height: none; bottom: auto; }
 }
+
+
+/* Map focus: pulsing beacon, animated route, labels */
+.beacon { position: relative; width: 0; height: 0; }
+.beacon i { position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%; background: #dbe4ec; border: 3px solid #0a1017; box-shadow: 0 0 0 2px currentColor; }
+.beacon span { position: absolute; left: -22px; top: -22px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid currentColor; opacity: 0; animation: beacon-pulse 1.8s ease-out infinite; }
+.beacon span + span { animation-delay: 0.9s; }
+.beacon.warm { color: #f2725e; }
+.beacon.cold { color: #6f9cf2; }
+.beacon.info { color: #4fd1c5; }
+@keyframes beacon-pulse { 0% { transform: scale(0.35); opacity: 0.95; } 100% { transform: scale(1.9); opacity: 0; } }
+.route-focus { stroke-dasharray: 12 9; animation: route-march 0.9s linear infinite; filter: drop-shadow(0 0 4px rgba(242, 114, 94, 0.55)); }
+@keyframes route-march { to { stroke-dashoffset: -21; } }
+.leaflet-tooltip.focus-label {
+  background: rgba(10, 16, 23, 0.92); border: 1px solid currentColor; color: #dbe4ec; font-weight: 700; font-size: 11.5px;
+  padding: 3px 8px; border-radius: 6px; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+.leaflet-tooltip.focus-label::before { display: none; }
+.leaflet-tooltip.focus-label.warm { color: #ff8a73; }
+.leaflet-tooltip.focus-label.cold { color: #9dbcff; }
+.leaflet-tooltip.focus-label.info { color: #7fe0d6; }
+.leaflet-tooltip.focus-label.origin { color: #9db0c2; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .beacon span, .route-focus { animation: none; } }

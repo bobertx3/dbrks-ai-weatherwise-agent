@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, ZoomControl, useMap } from "react-leaflet";
+import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, ZoomControl, useMap } from "react-leaflet";
+import L from "leaflet";
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { AlertTriangle, Bot, X } from "lucide-react";
@@ -134,6 +135,23 @@ export default function NetworkMap({
     return layers.routes === "all" ? data.routes : data.routes.filter(isRisk);
   }, [data, layers.routes, statusFilter]);
   const selectedRouteId = selected?.kind === "route" ? selected.item.shipment_id : null;
+  // Focus mode: when something is selected, dim everything else and put a beacon on it.
+  const focused = selected !== null;
+  const focusFacilityId =
+    selected?.kind === "route" ? selected.item.destination_facility_id : selected?.kind === "facility" ? selected.item.facility_id : null;
+  const focusSiteId = selected?.kind === "site" ? selected.item.site_id : null;
+  const beacon = useMemo((): { at: [number, number]; label: string; tone: "warm" | "cold" | "info" } | null => {
+    if (!selected) return null;
+    if (selected.kind === "route") {
+      const r = selected.item;
+      const call = tempCall(r);
+      return { at: [r.destination_latitude, r.destination_longitude], label: `${r.shipment_id}${call ? ` · ${call}` : ""}`,
+               tone: call ? callClass(call) : "info" };
+    }
+    if (selected.kind === "facility") return { at: [selected.item.latitude, selected.item.longitude], label: selected.item.facility_name, tone: "info" };
+    return { at: [selected.item.latitude, selected.item.longitude], label: selected.item.site_name, tone: "info" };
+  }, [selected]);
+  const svgRenderer = useMemo(() => L.svg({ padding: 0.5 }), []); // focus route is SVG so it can animate
 
   const facilityById = useMemo(
     () => Object.fromEntries((data?.facilities ?? []).map((f) => [f.facility_id, f])),
@@ -179,7 +197,7 @@ export default function NetworkMap({
               pathOptions={{
                 color: routeColor(r),
                 weight: r.shipment_id === selectedRouteId ? 4.5 : isRisk(r) ? 2.2 : 1.2,
-                opacity: r.shipment_id === selectedRouteId ? 1 : isRisk(r) ? 0.8 : 0.35,
+                opacity: focused ? (r.shipment_id === selectedRouteId ? 0 : 0.1) : isRisk(r) ? 0.8 : 0.35,
                 dashArray: r.status === "Delayed" ? "6 6" : undefined,
               }}
               eventHandlers={{ click: () => setSelected({ kind: "route", item: r }) }}
@@ -195,7 +213,11 @@ export default function NetworkMap({
                 key={f.facility_id}
                 center={[f.latitude, f.longitude]}
                 radius={f.facility_type === "Hospital" ? 7 : 4.5}
-                pathOptions={{ color: facilityColor(f), fillColor: facilityColor(f), fillOpacity: 0.85, weight: f.excursions ? 3 : 1 }}
+                pathOptions={{
+                  color: facilityColor(f), fillColor: facilityColor(f), weight: f.excursions ? 3 : 1,
+                  fillOpacity: focused && f.facility_id !== focusFacilityId ? 0.15 : 0.85,
+                  opacity: focused && f.facility_id !== focusFacilityId ? 0.2 : 1,
+                }}
                 eventHandlers={{ click: () => setSelected({ kind: "facility", item: f }) }}
               >
                 <Tooltip direction="top" offset={[0, -6]}>
@@ -215,7 +237,11 @@ export default function NetworkMap({
                   key={st.site_id}
                   center={[st.latitude, st.longitude]}
                   radius={st.site_type === "Supply Center" ? 10 : 8}
-                  pathOptions={{ color, fillColor: "#0a1017", fillOpacity: 0.9, weight: 3 }}
+                  pathOptions={{
+                    color, fillColor: "#0a1017", weight: 3,
+                    fillOpacity: focused && st.site_id !== focusSiteId ? 0.3 : 0.9,
+                    opacity: focused && st.site_id !== focusSiteId ? 0.2 : 1,
+                  }}
                   eventHandlers={{ click: () => setSelected({ kind: "site", item: st }) }}
                 >
                   <Tooltip direction="top" offset={[0, -8]}>
@@ -226,6 +252,35 @@ export default function NetworkMap({
                 </CircleMarker>
               );
             })}
+          {selected?.kind === "route" && (
+            <>
+              <Polyline
+                key={`focus-${selected.item.shipment_id}`}
+                positions={[[selected.item.origin_latitude, selected.item.origin_longitude], [selected.item.destination_latitude, selected.item.destination_longitude]]}
+                pathOptions={{ color: routeColor(selected.item), weight: 5, opacity: 1, className: "route-focus", renderer: svgRenderer }}
+                interactive={false}
+              />
+              <CircleMarker
+                center={[selected.item.origin_latitude, selected.item.origin_longitude]}
+                radius={5}
+                pathOptions={{ color: "#dbe4ec", fillColor: "#0a1017", fillOpacity: 1, weight: 2 }}
+                interactive={false}
+              >
+                <Tooltip permanent direction="left" offset={[-6, 0]} className="focus-label origin">{selected.item.origin}</Tooltip>
+              </CircleMarker>
+            </>
+          )}
+          {beacon && (
+            <Marker
+              key={`beacon-${beacon.label}`}
+              position={beacon.at}
+              interactive={false}
+              zIndexOffset={1000}
+              icon={L.divIcon({ className: "", iconSize: [0, 0], html: `<div class="beacon ${beacon.tone}"><span></span><span></span><i></i></div>` })}
+            >
+              <Tooltip permanent direction="right" offset={[14, 0]} className={`focus-label ${beacon.tone}`}>{beacon.label}</Tooltip>
+            </Marker>
+          )}
         </MapContainer>
 
         {/* Overlays sit beside the Leaflet container (not inside it), so clicks and scrolls on them never pan the map. */}
