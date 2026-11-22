@@ -192,6 +192,7 @@ export default function CommandCenter({
                         title="Ask the WeatherWise agent about this shipment"
                         onClick={(e) => {
                           e.stopPropagation();
+                          pick(r); // highlight it on the map while the agent works
                           onAsk(askFor(r));
                         }}
                       >
