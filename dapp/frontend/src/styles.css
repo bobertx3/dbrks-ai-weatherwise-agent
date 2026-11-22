@@ -816,3 +816,9 @@ html, body, #root { height: auto; min-height: 100%; }
 .hotspots { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 4px; }
 .hotspots .lbl { width: 100%; }
 .hotspots .risk-badge { font-size: 11px; padding: 2px 8px; }
+
+/* Keep the map's own layers (Leaflet panes/controls, floating toolbar, card) inside the map:
+   a new stacking context so nothing in the map can paint over the header or the assistant drawer. */
+.netmap-canvas { isolation: isolate; z-index: 0; }
+.assist { z-index: 960; }
+@media (max-width: 1300px) { .assist { z-index: 960; } }
