@@ -822,3 +822,7 @@ html, body, #root { height: auto; min-height: 100%; }
 .netmap-canvas { isolation: isolate; z-index: 0; }
 .assist { z-index: 960; }
 @media (max-width: 1300px) { .assist { z-index: 960; } }
+/* Overlay drawer must fill from under the header to the bottom of the screen (phones use the full-screen rule). */
+@media (min-width: 721px) and (max-width: 1300px) {
+  .assist { height: calc(100dvh - var(--topbar-h)) !important; max-height: none; bottom: auto; }
+}
