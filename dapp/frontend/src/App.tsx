@@ -12,6 +12,24 @@ export default function App() {
   const [healthError, setHealthError] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalKey>(null);
   const [assistOpen, setAssistOpen] = useState(false);
+
+  // Click outside the assistant (or press Esc) to dismiss it. Controls that send something to the
+  // assistant carry data-keep-assist so they don't close it. The chat stays mounted, so nothing is lost.
+  useEffect(() => {
+    if (!assistOpen) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (!t || t.closest(".assist") || t.closest("[data-keep-assist]") || t.closest(".modal-root")) return;
+      setAssistOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAssistOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [assistOpen]);
   const [assistTab, setAssistTab] = useState<AssistTab>("agent");
   const [pending, setPending] = useState<{ id: number; text: string } | null>(null);
   const headerRef = useRef<HTMLElement>(null);
@@ -76,7 +94,7 @@ export default function App() {
               <Sparkles size={13} /> <span className="bl">Genie One</span> <ExternalLink size={11} />
             </a>
           )}
-          <button className={`btn coral-solid ${assistOpen ? "active" : ""}`} onClick={() => setAssistOpen((o) => !o)}>
+          <button data-keep-assist className={`btn coral-solid ${assistOpen ? "active" : ""}`} onClick={() => setAssistOpen((o) => !o)}>
             <Bot size={13} /> <span className="bl-ask">Ask WeatherWise</span><span className="bl-ask-short">Ask</span>
           </button>
         </div>

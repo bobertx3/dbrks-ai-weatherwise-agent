@@ -189,6 +189,7 @@ export default function CommandCenter({
                     <td>
                       <button
                         className="row-ask"
+                        data-keep-assist
                         title="Ask the WeatherWise agent about this shipment"
                         onClick={(e) => {
                           e.stopPropagation();

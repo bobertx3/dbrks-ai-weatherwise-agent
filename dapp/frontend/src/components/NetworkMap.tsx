@@ -446,7 +446,7 @@ function Details({ sel, facilityById, onClose, onAskRoute }: { sel: NonNullable<
           />
           <Row k="Distance" v={`${nf.format(sel.item.route_miles)} mi`} />
           {onAskRoute && (
-            <button className="btn coral-solid run-agent" onClick={() => onAskRoute(sel.item)}>
+            <button data-keep-assist className="btn coral-solid run-agent" onClick={() => onAskRoute(sel.item)}>
               <Bot size={14} /> Run agent on {sel.item.shipment_id}
             </button>
           )}
