@@ -1,0 +1,61 @@
+facility_id,facility_name,facility_type,city,state,metro,latitude,longitude,serving_site_id,beds,operating_rooms
+FAC-001,Midtown Surgical Hospital,Hospital,Manhattan,NY,"New York, NY",40.7549,-73.984,SITE-214,834,19
+FAC-002,Upper East Side Heart Institute,Hospital,Manhattan,NY,"New York, NY",40.7736,-73.9566,SITE-211,205,29
+FAC-003,Harlem Community Medical Center,Hospital,Manhattan,NY,"New York, NY",40.8116,-73.9465,SITE-211,430,26
+FAC-004,Chelsea Orthopedic Clinic,Clinic,Manhattan,NY,"New York, NY",40.7465,-74.0014,SITE-214,0,3
+FAC-005,Lower Manhattan General Hospital,Hospital,Manhattan,NY,"New York, NY",40.71,-74.005,SITE-214,934,18
+FAC-006,Washington Heights Medical Center,Hospital,Manhattan,NY,"New York, NY",40.8417,-73.9394,SITE-211,872,46
+FAC-007,Murray Hill Cardiology Clinic,Clinic,Manhattan,NY,"New York, NY",40.7479,-73.9757,SITE-214,0,2
+FAC-008,Park Slope Outpatient Surgery,Clinic,Brooklyn,NY,"New York, NY",40.671,-73.9814,SITE-214,0,6
+FAC-009,Downtown Brooklyn Medical Center,Hospital,Brooklyn,NY,"New York, NY",40.6928,-73.9903,SITE-214,612,14
+FAC-010,Bay Ridge Joint & Spine Clinic,Clinic,Brooklyn,NY,"New York, NY",40.6264,-74.0299,SITE-214,0,2
+FAC-011,Flatbush General Hospital,Hospital,Brooklyn,NY,"New York, NY",40.6409,-73.959,SITE-214,275,25
+FAC-012,Williamsburg Vascular Clinic,Clinic,Brooklyn,NY,"New York, NY",40.7081,-73.9571,SITE-214,0,3
+FAC-013,Flushing Regional Hospital,Hospital,Queens,NY,"New York, NY",40.758,-73.8303,SITE-211,697,13
+FAC-014,Astoria Surgical Clinic,Clinic,Queens,NY,"New York, NY",40.7644,-73.9235,SITE-211,0,6
+FAC-015,Jamaica Medical Center,Hospital,Queens,NY,"New York, NY",40.7027,-73.789,SITE-212,383,46
+FAC-016,Forest Hills Cardiology Clinic,Clinic,Queens,NY,"New York, NY",40.7181,-73.8448,SITE-212,0,5
+FAC-017,Fordham Medical Center,Hospital,Bronx,NY,"New York, NY",40.861,-73.89,SITE-211,405,40
+FAC-018,Riverdale Orthopedic Clinic,Clinic,Bronx,NY,"New York, NY",40.89,-73.912,SITE-211,0,6
+FAC-019,South Bronx Community Hospital,Hospital,Bronx,NY,"New York, NY",40.816,-73.917,SITE-211,464,12
+FAC-020,Staten Island University Medical,Hospital,Staten Island,NY,"New York, NY",40.584,-74.087,SITE-214,957,22
+FAC-021,Hoboken Waterfront Clinic,Clinic,Hoboken,NJ,"Hoboken, NJ",40.744,-74.0324,SITE-214,0,7
+FAC-022,Jersey City Medical Pavilion,Hospital,Jersey City,NJ,"Jersey City, NJ",40.7178,-74.0431,SITE-214,612,33
+FAC-023,Hackensack Valley Hospital,Hospital,Hackensack,NJ,"Hackensack, NJ",40.8859,-74.0435,SITE-211,464,21
+FAC-024,Newark Heart & Vascular,Hospital,Newark,NJ,"Newark, NJ",40.74,-74.19,SITE-201,400,33
+FAC-025,White Plains Surgical Center,Clinic,White Plains,NY,"White Plains, NY",41.034,-73.7629,SITE-215,0,2
+FAC-026,Yonkers General Hospital,Hospital,Yonkers,NY,"Yonkers, NY",40.9312,-73.8988,SITE-211,274,36
+FAC-027,Mineola Orthopedic Institute,Hospital,Mineola,NY,"Mineola, NY",40.749,-73.6407,SITE-212,279,34
+FAC-028,Garden City Ambulatory Surgery,Clinic,Garden City,NY,"Garden City, NY",40.7268,-73.6343,SITE-212,0,8
+FAC-029,Stamford Coastal Hospital,Hospital,Stamford,CT,"Stamford, CT",41.06,-73.54,SITE-215,532,28
+FAC-030,New Haven Cardiac Clinic,Clinic,New Haven,CT,"New Haven, CT",41.3083,-72.9279,SITE-217,0,8
+FAC-031,Back Bay Medical Center,Hospital,Boston,MA,"Boston, MA",42.3503,-71.081,SITE-203,224,41
+FAC-032,Cambridge Surgical Clinic,Clinic,Cambridge,MA,"Cambridge, MA",42.3736,-71.1097,SITE-203,0,6
+FAC-033,Providence Harbor Hospital,Hospital,Providence,RI,"Providence, RI",41.824,-71.4128,SITE-203,307,36
+FAC-034,Albany Capital Region Medical,Hospital,Albany,NY,"Albany, NY",42.66,-73.78,SITE-202,260,47
+FAC-035,Center City Heart Hospital,Hospital,Philadelphia,PA,"Philadelphia, PA",39.95,-75.16,SITE-208,480,35
+FAC-036,Main Line Orthopedic Clinic,Clinic,Bryn Mawr,PA,"Bryn Mawr, PA",40.0218,-75.3163,SITE-208,0,6
+FAC-037,Inner Harbor Medical Center,Hospital,Baltimore,MD,"Baltimore, MD",39.285,-76.61,SITE-218,376,16
+FAC-038,Capitol Hill Surgical Hospital,Hospital,Washington,DC,"Washington, DC",38.8899,-76.99,SITE-219,226,26
+FAC-039,Three Rivers Medical Center,Hospital,Pittsburgh,PA,"Pittsburgh, PA",40.443,-79.96,SITE-220,971,30
+FAC-040,Lakeshore Cardiac Institute,Hospital,Cleveland,OH,"Cleveland, OH",41.503,-81.621,SITE-210,261,26
+FAC-041,Loop Surgical Clinic,Clinic,Chicago,IL,"Chicago, IL",41.88,-87.63,SITE-221,0,8
+FAC-042,North Shore Medical Center,Hospital,Evanston,IL,"Evanston, IL",42.0451,-87.6877,SITE-221,283,36
+FAC-043,Peachtree Heart Hospital,Hospital,Atlanta,GA,"Atlanta, GA",33.788,-84.385,SITE-222,464,41
+FAC-044,Buckhead Orthopedic Clinic,Clinic,Atlanta,GA,"Atlanta, GA",33.84,-84.38,SITE-222,0,7
+FAC-045,Biscayne Bay Medical Center,Hospital,Miami,FL,"Miami, FL",25.79,-80.19,SITE-206,1034,35
+FAC-046,Coral Gables Surgical Clinic,Clinic,Coral Gables,FL,"Coral Gables, FL",25.7215,-80.2684,SITE-206,0,3
+FAC-047,Mile High Medical Center,Hospital,Denver,CO,"Denver, CO",39.73,-104.97,SITE-204,559,34
+FAC-048,Boulder Joint Clinic,Clinic,Boulder,CO,"Boulder, CO",40.015,-105.2705,SITE-204,0,3
+FAC-049,Lone Star Heart Hospital,Hospital,Austin,TX,"Austin, TX",30.28,-97.73,SITE-209,866,29
+FAC-050,Uptown Dallas Surgical Clinic,Clinic,Dallas,TX,"Dallas, TX",32.8,-96.8,SITE-224,0,7
+FAC-051,Puget Sound Medical Center,Hospital,Seattle,WA,"Seattle, WA",47.61,-122.32,SITE-207,879,16
+FAC-052,Rose City Cardiac Clinic,Clinic,Portland,OR,"Portland, OR",45.5152,-122.6784,SITE-207,0,6
+FAC-053,Treasure Valley Hospital,Hospital,Boise,ID,"Boise, ID",43.615,-116.2023,SITE-207,830,22
+FAC-054,La Jolla Surgical Hospital,Hospital,San Diego,CA,"San Diego, CA",32.8801,-117.234,SITE-205,726,27
+FAC-055,Westside LA Orthopedic Clinic,Clinic,Los Angeles,CA,"Los Angeles, CA",34.06,-118.44,SITE-225,0,3
+FAC-056,Bay Area Heart Institute,Hospital,San Francisco,CA,"San Francisco, CA",37.763,-122.458,SITE-225,653,36
+FAC-057,Desert Valley Medical Center,Hospital,Phoenix,AZ,"Phoenix, AZ",33.48,-112.07,SITE-205,456,47
+FAC-058,Music City Surgical Clinic,Clinic,Nashville,TN,"Nashville, TN",36.1627,-86.7816,SITE-223,0,3
+FAC-059,Charlotte Regional Heart,Hospital,Charlotte,NC,"Charlotte, NC",35.2271,-80.8431,SITE-222,881,32
+FAC-060,Twin Cities Medical Center,Hospital,Minneapolis,MN,"Minneapolis, MN",44.9778,-93.265,SITE-221,1043,15

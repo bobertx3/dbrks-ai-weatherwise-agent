@@ -10,16 +10,37 @@ variables:
     default: "agents_bldemos-agentbricks_weatherwise-weatherwise"
   sql_warehouse_id:
     description: "SQL warehouse ID for the dashboard and Genie features"
-    default: "35670cdf44904d28"
+    default: "c7a42574bb619744"
+  genie_space_id:
+    description: "Genie space behind the app's Ask Genie drawer"
+    default: "01f170fcaf40172a87ed6c9398d7f2d5"
   resource_name_suffix:
     description: "Suffix for resource names to avoid collisions"
+  lakebase_database:
+    description: "Lakebase Autoscaling database (projects/<project>/branches/<branch>/databases/<db>) holding the synced WeatherWise tables"
+    default: "projects/dbrks-eo-lb/branches/production/databases/databricks-postgres"
+
+# .env is gitignored (secrets stay out of git) but must be uploaded to the workspace:
+# agent_src/agent_eval_notebook loads it via load_dotenv(find_dotenv()). Bundle sync
+# honors .gitignore, so include it explicitly.
+# node_modules is excluded: otherwise ~2,300 files upload and app deploys hang on
+# "Downloading source code".
+sync:
+  include:
+    - .env
+  exclude:
+    - dapp/frontend/node_modules
+    - .env.bkp
+    - .env.prev
 
 resources:
   apps:
     weatherwise_chatapp:
       name: weatherwise-chat-agent
-      description: "WeatherWise Supply Chain Agent Chat Application"
-      source_code_path: ./chatapp
+      description: "MedTech WeatherWise Agent - supply chain dashboard, agent chat, and Genie"
+      # FastAPI backend + React frontend (built into dapp/static). Runtime env vars are in
+      # dapp/app.yaml; each "valueFrom" key there must match a resource name below.
+      source_code_path: ./dapp
       resources:
         - name: serving-endpoint
           description: "Databricks serving endpoint for the weatherwise agent"
@@ -31,13 +52,91 @@ resources:
           sql_warehouse:
             id: ${var.sql_warehouse_id}
             permission: CAN_USE
-        # Optional: Uncomment for persistent chat history (requires Lakebase)
-        # - name: database
-        #   description: "Lakebase database for chat history"
-        #   database:
-        #     database_name: databricks_postgres
-        #     instance_name: ${resources.database_instances.weatherwise_db.name}
-        #     permission: CAN_CONNECT_AND_CREATE
+        - name: genie-space
+          description: "Genie space for the Ask Genie drawer"
+          genie_space:
+            name: WeatherWise Supply Chain Explorer
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
+        # Lakebase Autoscaling database with the synced WeatherWise tables (overview, at-risk, map read from it).
+        # The platform injects LAKEBASE_ENDPOINT / PGHOST / PGUSER for this resource; see dapp/app.py.
+        - name: postgres
+          description: "Lakebase database with synced WeatherWise tables (fast reads for overview, at-risk, map)"
+          postgres:
+            branch: projects/dbrks-eo-lb/branches/production
+            database: ${var.lakebase_database}
+            permission: CAN_CONNECT_AND_CREATE
+        # Lakebase setup. Synced tables are created with the CLI (DAB synced-table support is not available yet).
+        # Target: Lakebase project dbrks-eo-lb (branch production, database databricks_postgres), reached through
+        # UC catalog bldemos_lakebase. Postgres schema: agentbricks_weatherwise. The four tables are SNAPSHOT
+        # synced tables from bldemos.agentbricks_weatherwise.* (suppliers is not synced;
+        # weather is live from Open-Meteo, never stored).
+        #   Primary keys (verified unique, no NULLs): shipments(shipment_id), sites(site_id),
+        #   facilities(facility_id), inventory(site_id, product_id, lot_expiry)
+        #   Create one (repeat per table):
+        #     databricks postgres create-synced-table bldemos_lakebase.agentbricks_weatherwise.<table> --profile DEFAULT --json '{"spec": {"source_table_full_name": "bldemos.agentbricks_weatherwise.<table>", "primary_key_columns": [...], "scheduling_policy": "SNAPSHOT", "branch": "projects/dbrks-eo-lb/branches/production", "postgres_database": "databricks_postgres", "create_database_objects_if_missing": true, "new_pipeline_spec": {"storage_catalog": "bldemos", "storage_schema": "default"}}}'
+        #   App read grant (run once the schema exists; the SP role exists after the app's postgres resource is deployed):
+        #     GRANT USAGE ON SCHEMA agentbricks_weatherwise TO "3466a509-e59e-4763-b767-f4dbabba43e7";
+        #     GRANT SELECT ON ALL TABLES IN SCHEMA agentbricks_weatherwise TO "3466a509-e59e-4763-b767-f4dbabba43e7";
+        #     (also ALTER DEFAULT PRIVILEGES for future tables). Run as the project owner via a psql/psycopg session.
+        #   Re-sync after the `setup` job rebuilds the UC tables (run after setup, from the repo root):
+        #     scripts/lakebase_resync.sh --profile DEFAULT
+        #     Starts a full-refresh update on each table's sync pipeline and waits until all four are online again.
+  jobs:
+    setup:
+      name: weatherwise-setup
+      description: "Load synthetic CSVs into UC tables (data/setup_data), then deploy the UC metric view and the agent's UC function tools"
+      tasks:
+        # Schema/volume, CSV upload, Delta tables (shipments, inventory, suppliers, sites,
+        # facilities, supplier_sops) and the Vector Search endpoint.
+        - task_key: setup_data
+          # No cluster: runs on serverless. Config comes from the synced .env.
+          notebook_task:
+            notebook_path: ./data/setup_data.ipynb
+            source: WORKSPACE
+        # shipment_risk_metrics metric view (job version of uc_semantics/deploy.sh)
+        - task_key: uc_semantics
+          depends_on:
+            - task_key: setup_data
+          notebook_task:
+            notebook_path: ./uc_semantics/deploy_metric_view.py
+            source: WORKSPACE
+            base_parameters:
+              warehouse_id: ${var.sql_warehouse_id}
+        # Genie space: tables + metric view + instructions from uc_semantics/genie_space.json
+        - task_key: genie_space
+          depends_on:
+            - task_key: uc_semantics
+          notebook_task:
+            notebook_path: ./uc_semantics/deploy_genie_space.py
+            source: WORKSPACE
+            base_parameters:
+              warehouse_id: ${var.sql_warehouse_id}
+        # get_shipments, get_supplier_details, get_backup_inventory, temp_gap
+        - task_key: uc_functions
+          depends_on:
+            - task_key: setup_data
+          notebook_task:
+            notebook_path: ./agent_src/tools/uc_tools/tool_uc_functions.ipynb
+            source: WORKSPACE
+
+    agent_eval:
+      name: weatherwise-agent-eval
+      description: "Log, evaluate, register (UC) and deploy the WeatherWise agent"
+      tasks:
+        # Unity AI Gateway model service + EXECUTE grant for the agent LLM service principal
+        # (create the SP once with scripts/setup_agent_llm_sp.sh).
+        - task_key: setup_ai_gateway
+          notebook_task:
+            notebook_path: ./agent_src/setup_ai_gateway.py
+            source: WORKSPACE
+        - task_key: agent_eval
+          depends_on:
+            - task_key: setup_ai_gateway
+          # No cluster: runs on serverless. Config comes from the synced .env.
+          notebook_task:
+            notebook_path: ./agent_src/agent_eval_notebook.ipynb
+            source: WORKSPACE
 
   # Optional: Uncomment for persistent chat history
   # database_instances:

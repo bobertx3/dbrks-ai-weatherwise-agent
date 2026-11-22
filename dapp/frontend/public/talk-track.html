@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WeatherWise · Talk Track</title>
+<style>
+  :root {
+    --page: #0a1017; --panel: #0e1a26; --sunken: #0b1622; --line: #1c2b3a; --line-strong: #284056;
+    --text: #dbe4ec; --soft: #9db0c2; --muted: #6f899e; --dim: #4a5f73;
+    --teal: #4fd1c5; --coral: #f2725e; --amber: #e6ab4b; --blue: #6f9cf2;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--text); font: 14px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 18px 0; }
+  .eyebrow { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--teal); }
+  h1 { margin: 4px 0 2px; font-size: 18px; }
+  h1 .coral { color: var(--coral); }
+  .sub { color: var(--soft); font-size: 12.5px; margin: 0 0 12px; }
+  .tabs { display: flex; gap: 4px; }
+  .tab { background: none; border: 1px solid transparent; border-bottom: none; color: var(--muted); padding: 8px 14px; border-radius: 8px 8px 0 0; font: inherit; font-weight: 600; cursor: pointer; }
+  .tab.on { background: var(--page); color: var(--coral); border-color: var(--line); }
+  main { padding: 16px 18px 40px; }
+  section { display: none; } section.on { display: block; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .pill { font-family: var(--mono); font-size: 10.5px; color: var(--soft); border: 1px solid var(--line-strong); border-radius: 999px; padding: 3px 9px; }
+  .callout { background: rgba(242,114,94,.08); border: 1px solid rgba(242,114,94,.4); border-radius: 10px; padding: 10px 12px; margin: 0 0 16px; font-size: 13px; }
+  .callout b { color: var(--coral); }
+  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+  ol.steps > li { counter-increment: s; position: relative; padding: 0 0 16px 40px; border-left: 1px dashed var(--line-strong); margin-left: 13px; }
+  ol.steps > li:last-child { border-left-color: transparent; }
+  ol.steps > li::before { content: counter(s); position: absolute; left: -14px; top: 0; width: 27px; height: 27px; border-radius: 8px; background: var(--sunken); border: 1px solid var(--line-strong); color: var(--teal); font: 600 12px var(--mono); display: flex; align-items: center; justify-content: center; }
+  .step-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .step-h h2 { margin: 2px 0 6px; font-size: 14.5px; }
+  .time { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .row { display: grid; grid-template-columns: 58px 1fr; gap: 8px; margin: 4px 0; font-size: 13px; }
+  .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; padding-top: 3px; }
+  .k.do { color: var(--blue); } .k.say { color: var(--coral); } .k.show { color: var(--amber); }
+  .say-txt { color: var(--text); font-style: italic; }
+  .soft { color: var(--soft); }
+  code, .prompt { font-family: var(--mono); font-size: 12px; }
+  .prompt { display: block; background: var(--sunken); border: 1px solid var(--line); border-left: 3px solid var(--teal); border-radius: 6px; padding: 7px 10px; margin: 4px 0; color: var(--text); white-space: normal; }
+  .copy { float: right; margin-left: 8px; background: none; border: 1px solid var(--line-strong); color: var(--muted); border-radius: 5px; font: 10px var(--mono); padding: 2px 6px; cursor: pointer; }
+  .copy:hover { color: var(--teal); border-color: var(--teal); }
+  details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin: 0 0 8px; }
+  summary { cursor: pointer; padding: 10px 12px; font-weight: 600; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--teal); margin-right: 8px; display: inline-block; transition: transform .15s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  .ans { padding: 0 14px 12px 30px; color: var(--soft); font-size: 13px; }
+  .ans b { color: var(--text); }
+  .ans ul { margin: 6px 0; padding-left: 18px; }
+  h3 { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--muted); margin: 18px 0 8px; text-transform: uppercase; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 6px 0; }
+  td, th { text-align: left; border-bottom: 1px solid var(--line); padding: 5px 6px; vertical-align: top; }
+  th { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; color: var(--dim); text-transform: uppercase; }
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">SA PLAYBOOK · 10–15 MIN DEMO · 3 TRACKS</div>
+  <h1>MedTech <span class="coral">WeatherWise</span> Agent · Talk Track</h1>
+  <p class="sub">Keep this window beside the app. Open, pick a track, close.</p>
+  <div class="tabs">
+    <button class="tab on" data-tab="track">Talk Track</button>
+    <button class="tab" data-tab="faq">FAQs</button>
+  </div>
+</header>
+
+<main>
+<!-- ───────────────────────────── TALK TRACK ───────────────────────────── -->
+<section id="track" class="on">
+  <div class="callout">
+    <b>Email and SMS go to the demo owner by default.</b> Put your own email and phone in any prompt that sends something (see FAQs).
+  </div>
+
+  <ol class="steps">
+    <li>
+      <div class="step-h"><h2>Set up</h2><span class="time">before the demo</span></div>
+      <div class="row"><span class="k do">DO</span><span>Open the app and check the header says <b>AGENT LIVE</b>. Ask the agent one question to wake it up (it scales to zero, so the first call can take a few minutes), then click <b>↻</b>.</span></div>
+    </li>
+    <li>
+      <div class="step-h"><h2>Open</h2><span class="time">2 min</span></div>
+      <div class="row"><span class="k do">DO</span><span>Click <b>Problem &amp; Solution</b>, then close it on the Command Center.</span></div>
+      <div class="row"><span class="k say">SAY</span><span class="say-txt">"Heart valves, coated stents and tissue grafts are ruined if they get too warm or too cold. A heat wave, a freeze or a storm hold where a shipment is landing can push it out of range, and the product is scrapped. WeatherWise reads each shipment's temperature logger, checks the forecast at the destination, and calls out TOO WARM or TOO COLD before it spoils."</span></div>
+    </li>
+    <li>
+      <div class="step-h"><h2>Pick a demo track</h2><span class="time">5–8 min</span></div>
+      <div class="row"><span class="k do">DO</span><span>Click <b>Ask WeatherWise</b>. While the agent works, point at the steps streaming in: governed Unity Catalog functions, live weather, and SOP search, each with its request and response.</span></div>
+    </li>
+  </ol>
+
+  <h3>Track A · One shot <span style="color:var(--coral)">(recommended)</span></h3>
+  <div class="row"><span class="k do">DO</span><span>Click the first starter prompt, after adding your email and phone:</span></div>
+  <span class="prompt"><button class="copy">copy</button>Are there shipments headed to NYC that are at risk due to weather excursions? If so, look up the supplier SOPs so I can resolve them, and send a summary email with next steps to you@company.com, plus a short SMS to +15551234567 if anything is urgent.</span>
+  <div class="row"><span class="k show">SHOW</span><span>The at-risk shipments, the SOP steps, then the email and the text arriving on your phone (with the supplier contact to call).</span></div>
+  <div class="row"><span class="k say">SAY</span><span class="say-txt">"One question: it found the risk, followed the supplier's SOP and got the right people moving."</span></div>
+  <div class="row"><span class="k do">ALT</span><span>Forecast-driven version: use the <b>second starter prompt</b>; it names today's weather hot spot automatically:</span></div>
+  <span class="prompt"><button class="copy">copy</button>Is the weather putting any shipments headed to &lt;today's hot-spot city&gt; at risk when they arrive? If so, look up the supplier SOPs so I can resolve them, and send a summary email with next steps to you@company.com, plus a short SMS to +15551234567 if anything is urgent.</span>
+  <div class="row"><span class="k show">SHOW</span><span>The hot-spot badges above the prompts say which city and whether it is TOO WARM or TOO COLD today; the agent confirms it from the live forecast.</span></div>
+
+  <h3>Track B · Guided, two questions</h3>
+  <div class="row"><span class="k do">DO</span><span>1. Find the risk:</span></div>
+  <span class="prompt"><button class="copy">copy</button>Which NYC shipments are at risk tomorrow?</span>
+  <div class="row"><span class="k do">DO</span><span>2. Act on it:</span></div>
+  <span class="prompt"><button class="copy">copy</button>Look up the supplier SOPs for those shipments and email the next steps to you@company.com, plus a short SMS to +15551234567.</span>
+  <div class="row"><span class="k say">SAY</span><span class="say-txt">"First it explains the risk with numbers, then it takes action when I ask."</span></div>
+  <div class="row"><span class="k soft">TIP</span><span class="soft">Or click a shipment on the map and use <b>Run agent</b> in its details card.</span></div>
+
+  <h3>Track C · Genie and Genie One</h3>
+  <div class="row"><span class="k do">DO</span><span>Switch the drawer to <b>Ask Genie</b>:</span></div>
+  <span class="prompt"><button class="copy">copy</button>How many delayed shipments are there by carrier?</span>
+  <div class="row"><span class="k do">DO</span><span>Then click <b>Genie One</b> in the header for the workspace-wide experience.</span></div>
+  <div class="row"><span class="k say">SAY</span><span class="say-txt">"Same governed data, self-serve. Anyone can ask follow-up questions and see the SQL."</span></div>
+
+  <ol class="steps" style="margin-top:18px">
+    <li>
+      <div class="step-h"><h2>Close</h2><span class="time">2 min</span></div>
+      <div class="row"><span class="k do">DO</span><span>Click <b>Data Flow</b> if they ask how it's built, then <b>Outcome Maps</b>.</span></div>
+      <div class="row"><span class="k say">SAY</span><span class="say-txt">"Every shipment carries a temperature logger. Those readings stream straight into a Delta table through Zerobus Ingest, record by record over gRPC, with no Kafka to run. That's the sensor reading the agent checks against each product's range."</span></div>
+      <div class="row"><span class="k say">SAY</span><span class="say-txt">"Fewer scrapped products and faster escalations when the weather turns, on one governed platform: Unity Catalog, Lakebase, Model Serving, the Unity AI Gateway and MLflow."</span></div>
+    </li>
+  </ol>
+</section>
+
+<!-- ───────────────────────────── FAQs ───────────────────────────── -->
+<section id="faq">
+  <h3>Before you demo</h3>
+
+  <details open>
+    <summary>Who gets the email and the SMS?</summary>
+    <div class="ans">
+      By default, <b>the demo owner</b>: email <code>robert.leach@databricks.com</code>, SMS <code>(301) 908-5817</code>. To send to yourself, put your details <b>in the prompt</b>:
+      <span class="prompt"><button class="copy">copy</button>Send the escalation email to you@company.com and text the summary to +15551234567.</span>
+      <ul>
+        <li>Several emails work: separate them with commas.</li>
+        <li>"Email <i>me</i>" means the default address, not you. Always type yours.</li>
+        <li>Phone: use the full number, ideally with <code>+1</code>.</li>
+        <li>The agent sends without asking for confirmation, so check the prompt first.</li>
+      </ul>
+    </div>
+  </details>
+
+  <details>
+    <summary>The agent is slow or errors on the first question</summary>
+    <div class="ans">The serving endpoint scales to zero when idle. The first request after a quiet period can take a few minutes while it starts. Warm it up before the demo (step 1). After that, answers take about 10–45 seconds, and the steps stream in while it works.</div>
+  </details>
+
+  <details>
+    <summary>How do I reset between runs?</summary>
+    <div class="ans">Click <b>↻</b> in the agent panel for a fresh chat. The agent only sees the current conversation.</div>
+  </details>
+
+  <h3>About the data</h3>
+
+  <details>
+    <summary>Is the data real?</summary>
+    <div class="ans">Shipments, products, hospitals, suppliers and SOPs are <b>synthetic</b>. Product names are fictional but modeled on real temperature-sensitive devices. Supplier contacts and phone numbers (555) are made up, and the agent never emails suppliers. <b>Weather is live</b> from the Open-Meteo API (current conditions plus a 7-day forecast).</div>
+  </details>
+
+  <details>
+    <summary>Does the demo work on any day?</summary>
+    <div class="ans">Yes. Shipment dates are stored as <b>days from today</b> and turned into real dates every time they're read, so "today" and "tomorrow" are always right, with no refresh job. The NYC headline shipments (SHP-30001 to 30003) are STAT and already out of range: a heart valve TOO COLD on a JFK dock, a fibrin sealant thawing, a coated stent TOO WARM. Weather is live, so the app picks <b>today's weather hot spots</b> (the destinations whose forecast is furthest outside their products' ranges) and puts those cities into the forecast prompts.</div>
+  </details>
+
+  <details>
+    <summary>What does STAT mean?</summary>
+    <div class="ans">STAT is the highest shipping priority, then Urgent, then Routine. Priority comes from the hospital order; the agent lists STAT first when several shipments are at risk.</div>
+  </details>
+
+  <details>
+    <summary>Why is a −30°F reading a problem?</summary>
+    <div class="ans">Frozen products have negative ranges. A cryopreserved bone graft must stay between −112°F and −40°F, so −30.7°F is <b>9.3°F warmer</b> than its limit: it's starting to thaw. Frozen products ship on dry ice, so the agent judges them on sensor reading and delay, not outdoor weather.</div>
+  </details>
+
+  <h3>How the agent decides</h3>
+
+  <details>
+    <summary>How is risk decided?</summary>
+    <div class="ans">
+      <ul>
+        <li><b>Out of range now</b> (sensor outside the product's range) → AT_RISK, whatever the weather.</li>
+        <li><b>Forecast</b> on the arrival day vs the product's range: gap ≥ 20°F → AT_RISK, 10–19°F → BORDERLINE, &lt;10°F → not at risk.</li>
+      </ul>
+      The temperature gap is a Unity Catalog SQL function ("rules, not AI"). The LLM orchestrates and explains.
+    </div>
+  </details>
+
+  <details>
+    <summary>Why doesn't it mention backup stock or lot expiry?</summary>
+    <div class="ans">For execs, "at risk" answers stay short: weather and temperature only: TOO WARM or TOO COLD, from the sensor or the destination forecast. Ask for more: <i>"Find backup stock for the at-risk shipments"</i>, or use Genie for lot expiry and inventory questions.</div>
+  </details>
+
+  <details>
+    <summary>Known quirks to steer around</summary>
+    <div class="ans">
+      <ul>
+        <li><b>"In transit"</b> is also a shipment status. Say "headed to NYC", or the agent may skip Delayed shipments (the headline stories).</li>
+        <li><b>"At risk tomorrow"</b> means arriving tomorrow. Without a date it covers everything still moving.</li>
+        <li>In the temperature-gap step, the response is an absolute value (no minus sign), so safe and unsafe gaps look alike. Don't open that step's details unless asked.</li>
+      </ul>
+    </div>
+  </details>
+
+  <h3>Platform questions</h3>
+
+  <details>
+    <summary>Which LLM, and how is it governed?</summary>
+    <div class="ans">GPT 5.6, called through a <b>Unity AI Gateway model service</b> (<code>bldemos.agentbricks_weatherwise.weatherwise_llm</code>). LLM calls run as a dedicated service principal with EXECUTE on that service, with no personal token. Every call is logged to the inference table <code>weatherwise_llm_payload</code>. Tools (UC functions, Vector Search) use Model Serving's automatic auth passthrough.</div>
+  </details>
+
+  <details>
+    <summary>Where do I see traces and logs?</summary>
+    <div class="ans">
+      <table>
+        <tr><th>What</th><th>Where</th></tr>
+        <tr><td>Agent traces</td><td>MLflow experiment <code>weatherwise_agent_traces</code>, also archived to <code>weatherwise_traces</code> in Unity Catalog</td></tr>
+        <tr><td>Agent endpoint requests</td><td><code>weatherwise_payload</code> inference table</td></tr>
+        <tr><td>LLM requests</td><td><code>weatherwise_llm_payload</code> inference table</td></tr>
+      </table>
+      All in <code>bldemos.agentbricks_weatherwise</code>.
+    </div>
+  </details>
+
+  <details>
+    <summary>Agent vs Genie: which do I use?</summary>
+    <div class="ans"><b>Agent</b>: multi-step work that takes action (weather, SOPs, email, SMS). <b>Genie</b>: ad-hoc questions about the data, with the SQL shown. Both use the same Unity Catalog tables and metric view.</div>
+  </details>
+
+  <details>
+    <summary>How do I rebuild or redeploy it?</summary>
+    <div class="ans">See the repo README. In short: <code>databricks bundle deploy</code>, then <code>bundle run setup</code> (data + semantics), <code>bundle run agent_eval</code> (register and deploy the agent) and <code>bundle run weatherwise_chatapp</code> (app). Re-sync Lakebase with <code>scripts/lakebase_resync.sh</code>.</div>
+  </details>
+</section>
+</main>
+
+<script>
+  document.querySelectorAll(".tab").forEach((t) =>
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === t));
+      document.querySelectorAll("section").forEach((s) => s.classList.toggle("on", s.id === t.dataset.tab));
+      window.scrollTo(0, 0);
+    }),
+  );
+  document.querySelectorAll(".copy").forEach((b) =>
+    b.addEventListener("click", async () => {
+      const text = b.parentElement.textContent.replace(/^copy/, "").trim();
+      try { await navigator.clipboard.writeText(text); b.textContent = "copied"; } catch { b.textContent = "select"; }
+      setTimeout(() => (b.textContent = "copy"), 1400);
+    }),
+  );
+</script>
+</body>
+</html>

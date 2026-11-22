@@ -1,0 +1,387 @@
+{
+  "title": "WeatherWise Supply Chain Explorer",
+  "description": "Ask about cold-chain shipments, delays, temperature excursions (too warm / too cold), weather delays, backup inventory, supply sites, hospitals/clinics, suppliers and SOPs for MedTech surgical supplies.",
+  "serialized_space": {
+    "version": 2,
+    "config": {
+      "sample_questions": [
+        {
+          "id": "a0000000000000000000000000000001",
+          "question": [
+            "Which NYC shipments are too warm or too cold right now?"
+          ]
+        },
+        {
+          "id": "a0000000000000000000000000000002",
+          "question": [
+            "Which active shipments have a temperature excursion right now?"
+          ]
+        },
+        {
+          "id": "a0000000000000000000000000000003",
+          "question": [
+            "What are the top delay reasons this week?"
+          ]
+        },
+        {
+          "id": "a0000000000000000000000000000004",
+          "question": [
+            "Which hospitals have the most delayed inbound shipments?"
+          ]
+        },
+        {
+          "id": "a0000000000000000000000000000005",
+          "question": [
+            "Where is backup Aortic Valve inventory near New York?"
+          ]
+        },
+        {
+          "id": "a0000000000000000000000000000006",
+          "question": [
+            "What is the delay rate by carrier?"
+          ]
+        }
+      ]
+    },
+    "data_sources": {
+      "tables": [
+        {
+          "identifier": "__CATALOG__.__SCHEMA__.facilities",
+          "column_configs": [
+            {
+              "column_name": "facility_name",
+              "synonyms": [
+                "hospital",
+                "clinic",
+                "care site"
+              ],
+              "enable_entity_matching": true,
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "facility_type",
+              "description": [
+                "Hospital or Clinic."
+              ],
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "metro",
+              "description": [
+                "Destination metro in 'City, ST' form; NYC boroughs are all 'New York, NY'."
+              ],
+              "enable_entity_matching": true
+            }
+          ]
+        },
+        {
+          "identifier": "__CATALOG__.__SCHEMA__.inventory",
+          "column_configs": [
+            {
+              "column_name": "on_hand_qty",
+              "description": [
+                "Units available at the site."
+              ],
+              "synonyms": [
+                "stock",
+                "quantity on hand",
+                "units"
+              ]
+            },
+            {
+              "column_name": "product_name",
+              "enable_entity_matching": true,
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "site_name",
+              "enable_entity_matching": true
+            }
+          ]
+        },
+        {
+          "identifier": "__CATALOG__.__SCHEMA__.shipments",
+          "column_configs": [
+            {
+              "column_name": "delay_reason",
+              "description": [
+                "Why the shipment is delayed (weather, JFK backlog, reefer fault, ...). Empty when not delayed."
+              ],
+              "synonyms": [
+                "cause of delay"
+              ],
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "destination",
+              "description": [
+                "Destination metro 'City, ST'. For NYC use destination = 'New York, NY'."
+              ],
+              "synonyms": [
+                "ship to",
+                "destination city"
+              ],
+              "enable_entity_matching": true,
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "eta_date",
+              "description": [
+                "Current (revised) ETA. Compare with original_eta_date to see slippage."
+              ],
+              "synonyms": [
+                "eta",
+                "arrival date"
+              ]
+            },
+            {
+              "column_name": "last_recorded_temp_f",
+              "description": [
+                "Latest payload sensor reading in F. Excursion when above temperature_max_f or below temperature_min_f."
+              ],
+              "synonyms": [
+                "sensor temp",
+                "payload temperature"
+              ]
+            },
+            {
+              "column_name": "priority",
+              "description": [
+                "STAT (highest), Urgent, Routine."
+              ],
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "procedure_date",
+              "description": [
+                "Scheduled procedure date (not used in this demo)."
+              ],
+              "synonyms": [
+                "surgery date",
+                "case date"
+              ]
+            },
+            {
+              "column_name": "status",
+              "description": [
+                "Label-Create, In-Transit, Out-for-Delivery, Delayed, Delivered."
+              ],
+              "enable_format_assistance": true
+            },
+            {
+              "column_name": "temperature_max_f",
+              "description": [
+                "Upper limit of the product's allowed range (SOP-specific: -4F frozen sealant, -40F frozen bone allograft, 46F refrigerated, 77F valve or stent, 86F balloon)."
+              ]
+            }
+          ]
+        },
+        {
+          "identifier": "__CATALOG__.__SCHEMA__.sites",
+          "column_configs": [
+            {
+              "column_name": "site_name",
+              "enable_entity_matching": true
+            },
+            {
+              "column_name": "site_type",
+              "description": [
+                "Supply Center or Distribution Center."
+              ],
+              "enable_format_assistance": true
+            }
+          ]
+        },
+        {
+          "identifier": "__CATALOG__.__SCHEMA__.supplier_sops"
+        },
+        {
+          "identifier": "__CATALOG__.__SCHEMA__.suppliers",
+          "column_configs": [
+            {
+              "column_name": "supplier_name",
+              "enable_entity_matching": true,
+              "enable_format_assistance": true
+            }
+          ]
+        }
+      ],
+      "metric_views": [
+        {
+          "identifier": "__CATALOG__.__SCHEMA__.shipment_risk_metrics"
+        }
+      ]
+    },
+    "instructions": {
+      "text_instructions": [
+        {
+          "id": "b0000000000000000000000000000001",
+          "content": [
+            "Domain: cold-chain shipments of temperature-sensitive MedTech and surgical biologics (frozen fibrin sealant, frozen bone allograft, refrigerated thrombin hemostat, corneal grafts, bioprosthetic aortic valves, coated cardiac stents, drug-coated balloon catheters) from suppliers to hospitals and clinics.\n",
+            "For KPI questions (delay rate, excursions, average delay) prefer the shipment_risk_metrics metric view and use MEASURE() on its measures.\n",
+            "Temperature excursion = last_recorded_temp_f > temperature_max_f OR last_recorded_temp_f < temperature_min_f, using that shipment's own limits. Ranges differ by product: frozen fibrin sealant -22 to -4F, frozen bone allograft -112 to -40F, refrigerated thrombin hemostat and corneal graft 36-46F (2-8C), bioprosthetic aortic valve 50-77F (never freeze), coated cardiac stent 59-77F, drug-coated balloon 59-86F. Freezing is an excursion for valves, thrombin and corneal grafts. Warming or thawing is an excursion for frozen products. Heat is the excursion for coated stents and balloons.\n",
+            "Active shipment = status <> 'Delivered'. Delayed = status = 'Delayed'.\n",
+            "This demo is about weather and temperature risk. Label excursions TOO WARM (above max) or TOO COLD (below min). Do not report surgeries or procedure dates unless explicitly asked.\n",
+            "NYC, New York, Manhattan, Brooklyn, Queens, Bronx and Staten Island all mean shipments.destination = 'New York, NY' (or facilities.metro = 'New York, NY').\n",
+            "Weather is not stored in these tables. For weather or forecast questions, say the WeatherWise agent checks live forecasts; don't infer weather from the data.\n",
+            "For backup or alternate inventory, use inventory with on_hand_qty > 0, joined to sites for location; prefer lots with the latest lot_expiry and sites in the same state or metro as the destination.\n",
+            "Escalation tiers, contacts and SLAs differ by product and supplier. Read supplier_sops.product_doc for the shipment's product_id; never apply one 2-8C rule to every product.\n",
+            "Always show shipment_id, product_name and the destination facility name when listing shipments."
+          ]
+        }
+      ],
+      "example_question_sqls": [
+        {
+          "id": "c0000000000000000000000000000001",
+          "question": [
+            "Which NYC shipments are too warm or too cold right now?"
+          ],
+          "sql": [
+            "SELECT s.shipment_id, s.product_name, s.destination_facility_name, s.priority, s.status,\n",
+            "       s.last_recorded_temp_f, s.temperature_min_f, s.temperature_max_f,\n",
+            "       CASE WHEN s.last_recorded_temp_f > s.temperature_max_f THEN 'TOO WARM' ELSE 'TOO COLD' END AS temperature_call\n",
+            "FROM __CATALOG__.__SCHEMA__.shipments s\n",
+            "WHERE s.destination = 'New York, NY'\n",
+            "  AND s.status <> 'Delivered'\n",
+            "  AND (s.last_recorded_temp_f > s.temperature_max_f OR s.last_recorded_temp_f < s.temperature_min_f)\n",
+            "ORDER BY CASE s.priority WHEN 'STAT' THEN 0 WHEN 'Urgent' THEN 1 ELSE 2 END, s.shipment_id"
+          ]
+        },
+        {
+          "id": "c0000000000000000000000000000002",
+          "question": [
+            "Which active shipments have a temperature excursion?"
+          ],
+          "sql": [
+            "SELECT s.shipment_id, s.product_name, s.destination_facility_name, s.status, s.priority,\n",
+            "       s.last_recorded_temp_f, s.temperature_min_f, s.temperature_max_f, s.delay_reason\n",
+            "FROM __CATALOG__.__SCHEMA__.shipments s\n",
+            "WHERE s.status <> 'Delivered'\n",
+            "  AND (s.last_recorded_temp_f > s.temperature_max_f OR s.last_recorded_temp_f < s.temperature_min_f)\n",
+            "ORDER BY s.last_recorded_temp_f DESC"
+          ]
+        },
+        {
+          "id": "c0000000000000000000000000000003",
+          "question": [
+            "Where is backup Aortic Valve inventory near New York?"
+          ],
+          "sql": [
+            "SELECT i.site_id, i.site_name, st.site_type, i.city, i.state, i.on_hand_qty, i.lot_expiry\n",
+            "FROM __CATALOG__.__SCHEMA__.inventory i\n",
+            "JOIN __CATALOG__.__SCHEMA__.sites st ON st.site_id = i.site_id\n",
+            "WHERE i.product_name = 'Bioprosthetic Aortic Valve (bovine tissue)'\n",
+            "  AND i.on_hand_qty > 0\n",
+            "  AND i.state IN ('NY', 'NJ', 'CT', 'PA')\n",
+            "ORDER BY i.on_hand_qty DESC, i.lot_expiry DESC"
+          ]
+        },
+        {
+          "id": "c0000000000000000000000000000004",
+          "question": [
+            "What is the delay rate by carrier?"
+          ],
+          "sql": [
+            "SELECT `Carrier`, MEASURE(`Shipments`) AS shipments, MEASURE(`Delayed Shipments`) AS delayed,\n",
+            "       MEASURE(`Delay Rate`) AS delay_rate, MEASURE(`Avg Delay Hours`) AS avg_delay_hours\n",
+            "FROM __CATALOG__.__SCHEMA__.shipment_risk_metrics\n",
+            "GROUP BY `Carrier`\n",
+            "ORDER BY delay_rate DESC"
+          ]
+        }
+      ],
+      "join_specs": [
+        {
+          "id": "d0000000000000000000000000000001",
+          "left": {
+            "identifier": "__CATALOG__.__SCHEMA__.shipments",
+            "alias": "shipments"
+          },
+          "right": {
+            "identifier": "__CATALOG__.__SCHEMA__.facilities",
+            "alias": "facilities"
+          },
+          "sql": [
+            "`shipments`.`destination_facility_id` = `facilities`.`facility_id`",
+            "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+          ]
+        },
+        {
+          "id": "d0000000000000000000000000000002",
+          "left": {
+            "identifier": "__CATALOG__.__SCHEMA__.shipments",
+            "alias": "shipments"
+          },
+          "right": {
+            "identifier": "__CATALOG__.__SCHEMA__.suppliers",
+            "alias": "suppliers"
+          },
+          "sql": [
+            "`shipments`.`supplier_id` = `suppliers`.`supplier_id`",
+            "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+          ]
+        },
+        {
+          "id": "d0000000000000000000000000000003",
+          "left": {
+            "identifier": "__CATALOG__.__SCHEMA__.shipments",
+            "alias": "shipments"
+          },
+          "right": {
+            "identifier": "__CATALOG__.__SCHEMA__.sites",
+            "alias": "sites"
+          },
+          "sql": [
+            "`shipments`.`routed_via_site_id` = `sites`.`site_id`",
+            "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+          ]
+        },
+        {
+          "id": "d0000000000000000000000000000004",
+          "left": {
+            "identifier": "__CATALOG__.__SCHEMA__.inventory",
+            "alias": "inventory"
+          },
+          "right": {
+            "identifier": "__CATALOG__.__SCHEMA__.sites",
+            "alias": "sites"
+          },
+          "sql": [
+            "`inventory`.`site_id` = `sites`.`site_id`",
+            "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+          ]
+        },
+        {
+          "id": "d0000000000000000000000000000005",
+          "left": {
+            "identifier": "__CATALOG__.__SCHEMA__.facilities",
+            "alias": "facilities"
+          },
+          "right": {
+            "identifier": "__CATALOG__.__SCHEMA__.sites",
+            "alias": "sites"
+          },
+          "sql": [
+            "`facilities`.`serving_site_id` = `sites`.`site_id`",
+            "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+          ]
+        },
+        {
+          "id": "d0000000000000000000000000000006",
+          "left": {
+            "identifier": "__CATALOG__.__SCHEMA__.shipments",
+            "alias": "shipments"
+          },
+          "right": {
+            "identifier": "__CATALOG__.__SCHEMA__.supplier_sops",
+            "alias": "supplier_sops"
+          },
+          "sql": [
+            "`shipments`.`product_id` = `supplier_sops`.`product_id`",
+            "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+          ]
+        }
+      ]
+    }
+  }
+}

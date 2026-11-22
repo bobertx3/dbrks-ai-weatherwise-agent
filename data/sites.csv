@@ -1,0 +1,26 @@
+site_id,site_name,site_type,city,state,latitude,longitude
+SITE-201,New Jersey Hub,Supply Center,Newark,NJ,40.7357,-74.1724
+SITE-202,Upstate NY DC,Distribution Center,Albany,NY,42.6526,-73.7562
+SITE-203,Boston MedCenter Warehouse,Distribution Center,Boston,MA,42.3601,-71.0589
+SITE-204,Denver Surgical Depot,Distribution Center,Denver,CO,39.7392,-104.9903
+SITE-205,San Diego Clinical DC,Distribution Center,San Diego,CA,32.7157,-117.1611
+SITE-206,Miami Med DC,Distribution Center,Miami,FL,25.7617,-80.1918
+SITE-207,Seattle Ortho Hub,Distribution Center,Seattle,WA,47.6062,-122.3321
+SITE-208,Philadelphia ColdSite,Supply Center,Philadelphia,PA,39.9526,-75.1652
+SITE-209,Austin Surgical Supply,Distribution Center,Austin,TX,30.2672,-97.7431
+SITE-210,Cleveland Care DC,Distribution Center,Cleveland,OH,41.4993,-81.6944
+SITE-211,Bronx Cold Chain Center,Supply Center,Bronx,NY,40.8048,-73.881
+SITE-212,JFK Air Cargo Hub,Supply Center,Queens,NY,40.662,-73.79
+SITE-213,Long Island Distribution,Distribution Center,Hauppauge,NY,40.8257,-73.2026
+SITE-214,Brooklyn Navy Yard Depot,Distribution Center,Brooklyn,NY,40.7003,-73.9708
+SITE-215,Stamford Regional DC,Distribution Center,Stamford,CT,41.0534,-73.5387
+SITE-216,Edison Pharma Logistics,Supply Center,Edison,NJ,40.5187,-74.4121
+SITE-217,Hartford Medical DC,Distribution Center,Hartford,CT,41.7658,-72.6734
+SITE-218,Baltimore Cold Hub,Distribution Center,Baltimore,MD,39.2904,-76.6122
+SITE-219,Capital Surgical Supply,Distribution Center,Washington,DC,38.9072,-77.0369
+SITE-220,Pittsburgh Med DC,Distribution Center,Pittsburgh,PA,40.4406,-79.9959
+SITE-221,Chicago Midwest Hub,Supply Center,Chicago,IL,41.8781,-87.6298
+SITE-222,Atlanta Southeast DC,Supply Center,Atlanta,GA,33.749,-84.388
+SITE-223,Memphis Air Gateway,Supply Center,Memphis,TN,35.0424,-89.9767
+SITE-224,Dallas Central DC,Supply Center,Dallas,TX,32.7767,-96.797
+SITE-225,Los Angeles West DC,Supply Center,Los Angeles,CA,34.0522,-118.2437

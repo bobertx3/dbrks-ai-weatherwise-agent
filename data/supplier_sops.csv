@@ -1,68 +1,97 @@
 product_id,sku,product_name,supplier_id,product_doc
-PROD-0001,IMPL-A21,Hip Implant Set,SUP-001,"### Hip Implant Set (IMPL-A21) ###
+PROD-0001,FIB-F04,Frozen Fibrin Sealant Kit,SUP-001,"### Frozen Fibrin Sealant Kit (FIB-F04) ###
 Supplier: SUP-001
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
+Storage: Keep frozen at -22 to -4°F (-30 to -20°C). Shipper must hold frozen on arrival. Record temperatures at handoff.
+Excursion: any reading above -4°F (-20°C) means the kit is thawing. Do not refreeze. Quarantine the lot until QA disposition.
+Allowance: none. Thawed kit is not released for use without QA sign-off.
 Escalation Policy (embedded): Zimmer Biotech | Escalation SOP (ZB-SUP-2041)
-Tier 1 (<24h delay): logistics@zimmerbio.com
-Tier 2 (temp >8°C or delay >24h): qa@zimmerbio.com; director.supply@zimmerbio.com
-Tier 3 (critical): vp.ops@zimmerbio.com | +1-312-555-0100
-SLA: Acknowledge 1h; CAPA 24h."
-PROD-0002,STENT-C13,Cardio Stent Kit,SUP-002,"### Cardio Stent Kit (STENT-C13) ###
+Tier 1 (delay <24h, reading at or below -4°F): logistics@zimmerbio.com; log dry-ice recharge.
+Tier 2 (any reading above -4°F, or delay >24h): qa@zimmerbio.com; director.supply@zimmerbio.com; quarantine lot.
+Tier 3 (reading above 14°F / -10°C, or a STAT surgery at risk): vp.ops@zimmerbio.com | +1-312-555-0100.
+SLA: Acknowledge 1h; quarantine decision 4h; CAPA 24h."
+PROD-0002,STENT-C13,Cardiac Stent Kit (coated),SUP-002,"### Cardiac Stent Kit (coated) (STENT-C13) ###
 Supplier: SUP-002
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
+Storage: Store at 59–77°F (15–25°C). Drug-eluting coating: heat can change drug dose and coating integrity. Record temperatures at handoff.
+Excursion: any reading above 77°F (25°C) is a heat excursion. Readings below 59°F are logged as range deviations for QA review.
+Allowance: none without a written QA assessment.
 Escalation Policy (embedded): MedPro Devices | SLA (MP-SLA-007)
-On-time ≥98%; zero tolerance outside 2–8°C
-Escalation: shipping@medpro.com → operations@medpro.com → ceo.office@medpro.com
-If weather delay >12h, reroute."
-PROD-0003,CATH-B08,Balloon Catheter,SUP-003,"### Balloon Catheter (CATH-B08) ###
+On-time ≥98%. Any reading above 77°F is a non-conformance.
+Tier 1 (delay <12h, reading in range): shipping@medpro.com
+Tier 2 (reading 78–86°F, or delay >12h): operations@medpro.com; hold kit at destination until QA release.
+Tier 3 (reading above 86°F, or STAT surgery at risk): ceo.office@medpro.com.
+Weather delay >12h: reroute through an alternate hub.
+SLA: Acknowledge 1h; disposition 24h."
+PROD-0003,CATH-B08,Drug-Coated Balloon Catheter (paclitaxel),SUP-003,"### Drug-Coated Balloon Catheter (paclitaxel) (CATH-B08) ###
 Supplier: SUP-003
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
+Storage: Ambient, 59–86°F (15–30°C). Keep out of direct sun and heated cargo areas. Record temperatures at handoff.
+Excursion: any reading above 86°F (30°C) is a heat excursion. Paclitaxel coating degrades with heat. Isolate the lot.
+Allowance: none. Readings below 59°F are logged and reviewed by QA.
 Escalation Policy (embedded): Ortho Dynamics | OD-QA-115
-L1: warehouse.alerts@orthodynamics.com (≤2h)
-L2: dist.ops@orthodynamics.com (≤4h)
-L3: cmo.office@orthodynamics.com (≤8h)
+L1 (reading 87–90°F, or delay <24h): warehouse.alerts@orthodynamics.com (≤2h)
+L2 (reading above 90°F, or delay >24h): dist.ops@orthodynamics.com (≤4h)
+L3 (STAT surgery at risk): cmo.office@orthodynamics.com (≤8h)
 Temp excursion → isolate lot; notify QA."
-PROD-0004,PATCH-D02,Hernia Patch,SUP-004,"### Hernia Patch (PATCH-D02) ###
+PROD-0004,THRM-R04,Refrigerated Thrombin Hemostat,SUP-004,"### Refrigerated Thrombin Hemostat (THRM-R04) ###
 Supplier: SUP-004
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
+Storage: Refrigerate at 36–46°F (2–8°C). Do not freeze. Record temperatures at handoff.
+Excursion: below 36°F or above 46°F. Readings 47–50°F need QA review. Readings below 32°F (freezing) or above 50°F mean rejection.
+Allowance: none without QA review.
 Escalation Policy (embedded): CardioNova | CN-COLD-003
-Triggers: delay >24h, ambient >10°C, severe weather
-Chain: supply@cardionova.com → qa@cardionova.com → compliance@cardionova.com"
-PROD-0005,VALVE-E11,Aortic Valve,SUP-005,"### Aortic Valve (VALVE-E11) ###
+Tier 1 (delay <24h, reading in range): supply@cardionova.com
+Tier 2 (reading outside 36–46°F, or delay >24h): qa@cardionova.com
+Tier 3 (freezing below 32°F, reading above 50°F, or STAT surgery at risk): compliance@cardionova.com
+SLA: QA review within 24h."
+PROD-0005,VALVE-E11,Bioprosthetic Aortic Valve (bovine tissue),SUP-005,"### Bioprosthetic Aortic Valve (bovine tissue) (VALVE-E11) ###
 Supplier: SUP-005
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
-Escalation Policy (embedded): ValveX Labs | VX-QMS-221
-Minor (<1°C) log; Moderate (1–3°C) notify QA; Critical (>3°C) isolate + escalate
-Contacts: qa.supervisor@valvex.com; compliance@valvex.com"
-PROD-0006,IMPL-A21,Hip Implant Set,SUP-009,"### Hip Implant Set (IMPL-A21) ###
+Storage: Room temperature, 50–77°F (10–25°C), in the shipper. Never freeze. Keep out of direct sun. Record temperatures at handoff.
+Freeze events: any reading below 32°F (0°C) is a freeze event. Quarantine the valve at once. No release without ValveX written assessment.
+Minor (45–49.9°F or 77.1–80°F): log; QA notified next business day.
+Moderate (32–44.9°F or 80.1–86°F): notify QA same shift; hold at destination; QA disposition within 24h.
+Critical (below 32°F or above 86°F): isolate and escalate to qa.supervisor@valvex.com and compliance@valvex.com immediately.
+Contacts: qa.supervisor@valvex.com; compliance@valvex.com
+SLA: Acknowledge 2h; freeze quarantine within 1h."
+PROD-0006,BONE-A17,Frozen Bone Allograft (cryopreserved),SUP-009,"### Frozen Bone Allograft (cryopreserved) (BONE-A17) ###
 Supplier: SUP-009
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
+Storage: Keep at or below -40°F (-40°C). Allowed range -112 to -40°F (-80 to -40°C). Shipper hold time must cover ETA plus 12h. Record temperatures at handoff.
+Excursion: any reading above -40°F (-40°C) is a warming excursion. Do not refreeze. Quarantine the lot.
 Escalation Policy (embedded): OrthoCore | Supplier Playbook
-Notify ops@orthocore.com; if delay >24h or temp >8°C, escalate to qa@orthocore.com"
-PROD-0007,STENT-C13,Cardio Stent Kit,SUP-010,"### Cardio Stent Kit (STENT-C13) ###
+Tier 1 (delay <24h, reading at or below -40°F): ops@orthocore.com
+Tier 2 (any reading above -40°F, or delay >24h): qa@orthocore.com; quarantine lot.
+Tier 3 (reading above -22°F, or STAT surgery at risk): qa@orthocore.com; request supplier executive review."
+PROD-0007,STENT-C13,Cardiac Stent Kit (coated),SUP-010,"### Cardiac Stent Kit (coated) (STENT-C13) ###
 Supplier: SUP-010
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
+Storage: Store at 59–77°F (15–25°C). Coated stent: heat is the failure mode. Record temperatures at handoff.
+Excursion: any reading above 77°F (25°C) is a heat excursion. Quarantine the kit if the reading is above 86°F.
 Escalation Policy (embedded): MedAxis | Escalation Matrix
-L1: shipping@medaxis.io; L2: ops@medaxis.io; L3: exec@medaxis.io"
-PROD-0008,VALVE-E11,Aortic Valve,SUP-005,"### Aortic Valve (VALVE-E11) ###
+L1 (reading 78–86°F, or delay <12h): shipping@medaxis.io. Acknowledge 2h.
+L2 (reading above 86°F, or delay >12h): ops@medaxis.io. Acknowledge 4h.
+L3 (STAT surgery at risk, or any heat event on a STAT shipment): exec@medaxis.io. Acknowledge 1h.
+SLA: deviation report within 48h."
+PROD-0008,VALVE-E11,Bioprosthetic Aortic Valve (bovine tissue),SUP-005,"### Bioprosthetic Aortic Valve (bovine tissue) (VALVE-E11) ###
 Supplier: SUP-005
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
-Escalation Policy (embedded): ValveX Labs | VX-QMS-221
-Minor (<1°C) log; Moderate (1–3°C) notify QA; Critical (>3°C) isolate + escalate
-Contacts: qa.supervisor@valvex.com; compliance@valvex.com"
-PROD-0009,CATH-B08,Balloon Catheter,SUP-003,"### Balloon Catheter (CATH-B08) ###
+Storage: Room temperature, 50–77°F (10–25°C), in the shipper. Never freeze. Keep out of direct sun. Record temperatures at handoff.
+Freeze events: any reading below 32°F (0°C) is a freeze event. Quarantine the valve at once. No release without ValveX written assessment.
+Minor (45–49.9°F or 77.1–80°F): log; QA notified next business day.
+Moderate (32–44.9°F or 80.1–86°F): notify QA same shift; hold at destination; QA disposition within 24h.
+Critical (below 32°F or above 86°F): isolate and escalate to qa.supervisor@valvex.com and compliance@valvex.com immediately.
+Contacts: qa.supervisor@valvex.com; compliance@valvex.com
+SLA: Acknowledge 2h; freeze quarantine within 1h."
+PROD-0009,CATH-B08,Drug-Coated Balloon Catheter (paclitaxel),SUP-003,"### Drug-Coated Balloon Catheter (paclitaxel) (CATH-B08) ###
 Supplier: SUP-003
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
+Storage: Ambient, 59–86°F (15–30°C). Keep out of direct sun and heated cargo areas. Record temperatures at handoff.
+Excursion: any reading above 86°F (30°C) is a heat excursion. Paclitaxel coating degrades with heat. Isolate the lot.
+Allowance: none. Readings below 59°F are logged and reviewed by QA.
 Escalation Policy (embedded): Ortho Dynamics | OD-QA-115
-L1: warehouse.alerts@orthodynamics.com (≤2h)
-L2: dist.ops@orthodynamics.com (≤4h)
-L3: cmo.office@orthodynamics.com (≤8h)
+L1 (reading 87–90°F, or delay <24h): warehouse.alerts@orthodynamics.com (≤2h)
+L2 (reading above 90°F, or delay >24h): dist.ops@orthodynamics.com (≤4h)
+L3 (STAT surgery at risk): cmo.office@orthodynamics.com (≤8h)
 Temp excursion → isolate lot; notify QA."
-PROD-0010,IMPL-A21,Hip Implant Set,SUP-001,"### Hip Implant Set (IMPL-A21) ###
-Supplier: SUP-001
-Storage: Maintain 2–8°C (≈36–46°F). Record temperatures at handoff.
-Escalation Policy (embedded): Zimmer Biotech | Escalation SOP (ZB-SUP-2041)
-Tier 1 (<24h delay): logistics@zimmerbio.com
-Tier 2 (temp >8°C or delay >24h): qa@zimmerbio.com; director.supply@zimmerbio.com
-Tier 3 (critical): vp.ops@zimmerbio.com | +1-312-555-0100
-SLA: Acknowledge 1h; CAPA 24h."
+PROD-0010,CORN-K02,Corneal Tissue Graft (cold-storage medium),SUP-008,"### Corneal Tissue Graft (cold-storage medium) (CORN-K02) ###
+Supplier: SUP-008
+Storage: Refrigerate at 36–46°F (2–8°C) in cold-storage medium. Never freeze. Record temperatures at handoff.
+Excursion: below 36°F or above 46°F. Readings 47–50°F need eye-bank review. Freezing (below 32°F) or above 50°F mean the graft is rejected.
+Escalation Policy (embedded): SterileWorks | SW-QMS-118
+L1 (reading in range, delay <12h): h.price@sterileworks.com (≤2h)
+L2 (reading outside 36–46°F, or delay >12h): tissue.qa@sterileworks.com (≤4h)
+L3 (freezing, or STAT surgery at risk): ops.director@sterileworks.com | +1-415-555-0162 (≤8h)
+SLA: Acknowledge 1h; surgeon notified the same shift for any STAT case."

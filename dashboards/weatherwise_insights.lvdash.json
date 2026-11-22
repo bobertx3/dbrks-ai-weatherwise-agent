@@ -1,0 +1,1159 @@
+{
+  "datasets": [
+    {
+      "name": "ds_ship",
+      "displayName": "Shipments",
+      "queryLines": [
+        "SELECT shipment_id, product_name,\n",
+        "  CASE WHEN product_name ILIKE '%aortic valve%' THEN 'Aortic valve' WHEN product_name ILIKE '%stent%' THEN 'Coated stent'\n",
+        "       WHEN product_name ILIKE '%balloon%' THEN 'DCB catheter' WHEN product_name ILIKE '%fibrin%' THEN 'Fibrin sealant'\n",
+        "       WHEN product_name ILIKE '%bone allograft%' THEN 'Bone allograft' WHEN product_name ILIKE '%thrombin%' THEN 'Thrombin'\n",
+        "       WHEN product_name ILIKE '%cornea%' THEN 'Corneal graft' ELSE product_name END AS product,\n",
+        "  status, priority, carrier, origin, destination, destination_facility_name AS facility, destination_facility_type AS facility_type,\n",
+        "  split(destination, ', ')[1] AS dest_state, destination_latitude AS lat, destination_longitude AS lon,\n",
+        "  CAST(eta_date AS DATE) AS eta_date,\n",
+        "  COALESCE(delay_hours, 0) AS delay_hours, delay_reason,\n",
+        "  CASE WHEN COALESCE(delay_hours, 0) = 0 THEN 'On time'\n",
+        "       WHEN delay_reason RLIKE '(?i)snow|storm|rain|atmospheric|thunder' THEN 'Weather'\n",
+        "       WHEN delay_reason RLIKE '(?i)dock' THEN 'Dock hold'\n",
+        "       WHEN delay_reason RLIKE '(?i)dry-ice|reefer' THEN 'Equipment'\n",
+        "       WHEN delay_reason RLIKE '(?i)document' THEN 'Paperwork'\n",
+        "       ELSE 'Carrier & network' END AS delay_cause,\n",
+        "  last_recorded_temp_f AS sensor_f, temperature_min_f AS min_f, temperature_max_f AS max_f,\n",
+        "  CASE WHEN last_recorded_temp_f > temperature_max_f THEN 'Too warm'\n",
+        "       WHEN last_recorded_temp_f < temperature_min_f THEN 'Too cold' ELSE 'In range' END AS temp_status,\n",
+        "  CASE WHEN status <> 'Delivered' THEN 1 ELSE 0 END AS is_active,\n",
+        "  CASE WHEN status <> 'Delivered' AND status = 'Delayed' THEN 1 ELSE 0 END AS is_delayed,\n",
+        "  CASE WHEN status <> 'Delivered' AND (last_recorded_temp_f > temperature_max_f OR last_recorded_temp_f < temperature_min_f) THEN 1 ELSE 0 END AS is_excursion,\n",
+        "  CASE WHEN status = 'Delayed' AND delay_reason RLIKE '(?i)snow|storm|rain|atmospheric|thunder' THEN 1 ELSE 0 END AS is_weather_delay\n",
+        "FROM shipments\n"
+      ]
+    },
+    {
+      "name": "ds_inv",
+      "displayName": "Inventory",
+      "queryLines": [
+        "SELECT i.site_name, s.site_type, i.state,\n",
+        "  CASE WHEN i.product_name ILIKE '%aortic valve%' THEN 'Aortic valve' WHEN i.product_name ILIKE '%stent%' THEN 'Coated stent'\n",
+        "       WHEN i.product_name ILIKE '%balloon%' THEN 'DCB catheter' WHEN i.product_name ILIKE '%fibrin%' THEN 'Fibrin sealant'\n",
+        "       WHEN i.product_name ILIKE '%bone allograft%' THEN 'Bone allograft' WHEN i.product_name ILIKE '%thrombin%' THEN 'Thrombin'\n",
+        "       WHEN i.product_name ILIKE '%cornea%' THEN 'Corneal graft' ELSE i.product_name END AS product,\n",
+        "  i.on_hand_qty AS on_hand\n",
+        "FROM inventory i LEFT JOIN sites s ON s.site_id = i.site_id\n"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "overview",
+      "displayName": "Overview",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "header",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# WeatherWise \u00b7 Temperature-controlled logistics insights\n",
+                "**The story:** 130 temperature-sensitive medical shipments are in motion. **11 are already outside their temperature range** (mostly too warm), and **weather is the #1 cause of delays**, which keeps more product exposed for longer. Use the Filters page to slice by priority, carrier, product or state.\n"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-active",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "sum(is_active)",
+                      "expression": "SUM(`is_active`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(is_active)",
+                  "displayName": "Active shipments"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Active shipments",
+                "showDescription": true,
+                "description": "Not yet delivered"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-excursions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "sum(is_excursion)",
+                      "expression": "SUM(`is_excursion`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(is_excursion)",
+                  "displayName": "Out of range now"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Out of range now",
+                "showDescription": true,
+                "description": "Sensor reading TOO WARM or TOO COLD for the product"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-delayed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "sum(is_delayed)",
+                      "expression": "SUM(`is_delayed`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(is_delayed)",
+                  "displayName": "Delayed (all causes)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Delayed (all causes)",
+                "showDescription": true,
+                "description": "Active shipments behind their original ETA"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-weather-delay",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "sum(is_weather_delay)",
+                      "expression": "SUM(`is_weather_delay`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(is_weather_delay)",
+                  "displayName": "Delayed by weather"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Delayed by weather",
+                "showDescription": true,
+                "description": "Snow, storms, heavy rain"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "arrivals",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "daily(eta_date)",
+                      "expression": "DATE_TRUNC(\"DAY\", `eta_date`)"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "count(shipment_id)",
+                      "expression": "COUNT(`shipment_id`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(eta_date)",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Arrival date"
+                },
+                "y": {
+                  "fieldName": "count(shipment_id)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Shipments"
+                },
+                "color": {
+                  "fieldName": "status",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "In-Transit",
+                        "color": "#4FD1C5"
+                      },
+                      {
+                        "value": "Delayed",
+                        "color": "#F2725E"
+                      },
+                      {
+                        "value": "Out-for-Delivery",
+                        "color": "#6F9CF2"
+                      },
+                      {
+                        "value": "Label-Create",
+                        "color": "#9DB0C2"
+                      },
+                      {
+                        "value": "Delivered",
+                        "color": "#4A5F73"
+                      }
+                    ]
+                  },
+                  "displayName": "Status"
+                }
+              },
+              "annotations": [
+                {
+                  "type": "vertical-line",
+                  "encodings": {
+                    "x": {
+                      "dataValue": "2026-11-19T00:00:00.000",
+                      "dataType": "DATETIME"
+                    },
+                    "label": {
+                      "value": "Today"
+                    },
+                    "color": {
+                      "value": {
+                        "hex": "#E6AB4B"
+                      }
+                    }
+                  }
+                }
+              ],
+              "frame": {
+                "showTitle": true,
+                "title": "Shipments by arrival date",
+                "showDescription": true,
+                "description": "Delayed shipments stay in transit longer, so they face more of the weather"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 8,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "delay-cause",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "delay_cause",
+                      "expression": "`delay_cause`"
+                    },
+                    {
+                      "name": "sum(is_delayed)",
+                      "expression": "SUM(`is_delayed`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_delayed` = 1"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(is_delayed)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Delayed shipments"
+                },
+                "y": {
+                  "fieldName": "delay_cause",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "value"
+                    }
+                  },
+                  "displayName": "Cause"
+                },
+                "color": {
+                  "fieldName": "delay_cause",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Weather",
+                        "color": "#F2725E"
+                      },
+                      {
+                        "value": "Dock hold",
+                        "color": "#E6AB4B"
+                      },
+                      {
+                        "value": "Carrier & network",
+                        "color": "#6F9CF2"
+                      },
+                      {
+                        "value": "Equipment",
+                        "color": "#9B87F5"
+                      },
+                      {
+                        "value": "Paperwork",
+                        "color": "#9DB0C2"
+                      }
+                    ]
+                  },
+                  "legend": {
+                    "hide": true
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Why shipments are delayed",
+                "showDescription": true,
+                "description": "Weather causes more delays than anything else"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 5,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "excursions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "product",
+                      "expression": "`product`"
+                    },
+                    {
+                      "name": "temp_status",
+                      "expression": "`temp_status`"
+                    },
+                    {
+                      "name": "sum(is_excursion)",
+                      "expression": "SUM(`is_excursion`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_excursion` = 1"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(is_excursion)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Shipments out of range"
+                },
+                "y": {
+                  "fieldName": "product",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "value"
+                    }
+                  },
+                  "displayName": "Product"
+                },
+                "color": {
+                  "fieldName": "temp_status",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Too warm",
+                        "color": "#F2725E"
+                      },
+                      {
+                        "value": "Too cold",
+                        "color": "#6F9CF2"
+                      }
+                    ]
+                  },
+                  "displayName": "Excursion"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Out of range by product: too warm vs too cold",
+                "showDescription": true,
+                "description": "Latest sensor reading vs each product's own range"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "carrier-delays",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "carrier",
+                      "expression": "`carrier`"
+                    },
+                    {
+                      "name": "delay_cause",
+                      "expression": "`delay_cause`"
+                    },
+                    {
+                      "name": "sum(is_delayed)",
+                      "expression": "SUM(`is_delayed`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_delayed` = 1"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "carrier",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "value"
+                    }
+                  },
+                  "displayName": "Carrier"
+                },
+                "y": {
+                  "fieldName": "sum(is_delayed)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Delayed shipments"
+                },
+                "color": {
+                  "fieldName": "delay_cause",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Weather",
+                        "color": "#F2725E"
+                      },
+                      {
+                        "value": "Dock hold",
+                        "color": "#E6AB4B"
+                      },
+                      {
+                        "value": "Carrier & network",
+                        "color": "#6F9CF2"
+                      },
+                      {
+                        "value": "Equipment",
+                        "color": "#9B87F5"
+                      },
+                      {
+                        "value": "Paperwork",
+                        "color": "#9DB0C2"
+                      }
+                    ]
+                  },
+                  "displayName": "Cause"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Delays by carrier and cause",
+                "showDescription": true,
+                "description": "FedEx Cold has the most delays, averaging ~24h"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 11,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "dest-map",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "lat",
+                      "expression": "`lat`"
+                    },
+                    {
+                      "name": "lon",
+                      "expression": "`lon`"
+                    },
+                    {
+                      "name": "sum(is_active)",
+                      "expression": "SUM(`is_active`)"
+                    },
+                    {
+                      "name": "sum(is_excursion)",
+                      "expression": "SUM(`is_excursion`)"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "filters": [
+                    {
+                      "expression": "`is_active` = 1"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "symbol-map",
+              "encodings": {
+                "coordinates": {
+                  "latitude": {
+                    "fieldName": "lat"
+                  },
+                  "longitude": {
+                    "fieldName": "lon"
+                  }
+                },
+                "size": {
+                  "fieldName": "sum(is_active)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Active shipments"
+                },
+                "color": {
+                  "fieldName": "sum(is_excursion)",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "custom-sequential",
+                      "colors": {
+                        "start": "#4FD1C5",
+                        "end": "#F2725E"
+                      }
+                    }
+                  },
+                  "displayName": "Excursions"
+                }
+              },
+              "mark": {
+                "opacity": 0.8
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Where shipments are headed",
+                "showDescription": true,
+                "description": "Bubble size = active shipments \u00b7 color = temperature excursions"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 7,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "inv-heat",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_inv",
+                  "fields": [
+                    {
+                      "name": "product",
+                      "expression": "`product`"
+                    },
+                    {
+                      "name": "state",
+                      "expression": "`state`"
+                    },
+                    {
+                      "name": "sum(on_hand)",
+                      "expression": "SUM(`on_hand`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "heatmap",
+              "encodings": {
+                "x": {
+                  "fieldName": "state",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "State"
+                },
+                "y": {
+                  "fieldName": "product",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Product"
+                },
+                "color": {
+                  "fieldName": "sum(on_hand)",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "custom-sequential",
+                      "colors": {
+                        "start": "#16323A",
+                        "end": "#4FD1C5"
+                      }
+                    }
+                  },
+                  "displayName": "Units on hand"
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Backup stock: units on hand by product and state",
+                "showDescription": true,
+                "description": "Gaps = no backup nearby; NY has only 4 aortic valves"
+              }
+            }
+          },
+          "position": {
+            "x": 7,
+            "y": 17,
+            "width": 5,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "at-risk-table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "shipment_id",
+                      "expression": "`shipment_id`"
+                    },
+                    {
+                      "name": "priority",
+                      "expression": "`priority`"
+                    },
+                    {
+                      "name": "product",
+                      "expression": "`product`"
+                    },
+                    {
+                      "name": "facility",
+                      "expression": "`facility`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "eta_date",
+                      "expression": "`eta_date`"
+                    },
+                    {
+                      "name": "sensor_f",
+                      "expression": "`sensor_f`"
+                    },
+                    {
+                      "name": "min_f",
+                      "expression": "`min_f`"
+                    },
+                    {
+                      "name": "max_f",
+                      "expression": "`max_f`"
+                    },
+                    {
+                      "name": "temp_status",
+                      "expression": "`temp_status`"
+                    },
+                    {
+                      "name": "delay_reason",
+                      "expression": "`delay_reason`"
+                    }
+                  ],
+                  "disaggregated": true,
+                  "filters": [
+                    {
+                      "expression": "`is_excursion` = 1 OR `is_weather_delay` = 1"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "shipment_id",
+                    "displayName": "Shipment"
+                  },
+                  {
+                    "fieldName": "priority",
+                    "displayName": "Priority"
+                  },
+                  {
+                    "fieldName": "product",
+                    "displayName": "Product"
+                  },
+                  {
+                    "fieldName": "facility",
+                    "displayName": "Destination"
+                  },
+                  {
+                    "fieldName": "status",
+                    "displayName": "Status"
+                  },
+                  {
+                    "fieldName": "eta_date",
+                    "displayName": "ETA"
+                  },
+                  {
+                    "fieldName": "sensor_f",
+                    "displayName": "Sensor \u00b0F"
+                  },
+                  {
+                    "fieldName": "min_f",
+                    "displayName": "Min \u00b0F"
+                  },
+                  {
+                    "fieldName": "max_f",
+                    "displayName": "Max \u00b0F"
+                  },
+                  {
+                    "fieldName": "temp_status",
+                    "displayName": "Temperature",
+                    "style": {
+                      "type": "basic",
+                      "rules": [
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "In range"
+                            },
+                            "operator": "!="
+                          },
+                          "backgroundColor": {
+                            "hex": "#5A2A24"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "fieldName": "delay_reason",
+                    "displayName": "Delay reason"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Weather & temperature risk",
+                "showDescription": true,
+                "description": "Out of range now, or held by weather in transit"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 24,
+            "width": 12,
+            "height": 7
+          }
+        }
+      ]
+    },
+    {
+      "name": "filters",
+      "displayName": "Filters",
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS",
+      "layoutVersion": "GRID_V1",
+      "layout": [
+        {
+          "widget": {
+            "name": "filter-priority",
+            "queries": [
+              {
+                "name": "f_priority",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "priority",
+                      "expression": "`priority`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "priority",
+                    "displayName": "Priority",
+                    "queryName": "f_priority"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Priority"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter-carrier",
+            "queries": [
+              {
+                "name": "f_carrier",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "carrier",
+                      "expression": "`carrier`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "carrier",
+                    "displayName": "Carrier",
+                    "queryName": "f_carrier"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Carrier"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter-product",
+            "queries": [
+              {
+                "name": "f_product",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "product",
+                      "expression": "`product`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "product",
+                    "displayName": "Product",
+                    "queryName": "f_product"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Product"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "filter-state",
+            "queries": [
+              {
+                "name": "f_dest_state",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "dest_state",
+                      "expression": "`dest_state`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "dest_state",
+                    "displayName": "Destination state",
+                    "queryName": "f_dest_state"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Destination state"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 0,
+            "width": 3,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "canvasBackgroundColor": {
+        "light": "#F4F7FA",
+        "dark": "#0A1017"
+      },
+      "widgetBackgroundColor": {
+        "light": "#FFFFFF",
+        "dark": "#0E1A26"
+      },
+      "widgetBorderColor": {
+        "light": "#FFFFFF",
+        "dark": "#0E1A26"
+      },
+      "fontColor": {
+        "light": "#1B2733",
+        "dark": "#DBE4EC"
+      },
+      "selectionColor": {
+        "light": "#2BB3A8",
+        "dark": "#4FD1C5"
+      },
+      "visualizationColors": [
+        "#4FD1C5",
+        "#F2725E",
+        "#E6AB4B",
+        "#6F9CF2",
+        "#9B87F5",
+        "#7FD1A8",
+        "#9DB0C2"
+      ],
+      "widgetHeaderAlignment": "LEFT",
+      "widgetCornerRadius": 10
+    },
+    "genieSpace": {
+      "isEnabled": true,
+      "overrideId": "01f170fcaf40172a87ed6c9398d7f2d5",
+      "enablementMode": "ENABLED"
+    }
+  }
+}
