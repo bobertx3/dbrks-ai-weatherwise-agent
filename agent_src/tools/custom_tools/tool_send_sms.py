@@ -14,7 +14,7 @@ SMS_ACCOUNT_ID = os.getenv("SMS_ACCOUNT_ID")  # AC... account SID; recommended w
 FROM_NUMBER = "+18773559479"
 
 # Greeting prepended to every SMS the agent sends
-SMS_GREETING = "Hi from the WeatherWise Agent. Welcome to DAIWT NYC!"
+SMS_GREETING = "Hi from the WeatherWise Agent."
 
 # Sentence boundary: ". " / "; " / "! " / "? " followed by a capital, digit or symbol.
 # Decimals like "48.5°F" never match (no space after the dot).
@@ -75,7 +75,7 @@ def send_sms(to_number: str, message: str) -> str:
 # Override with LINKEDIN_URL to point at someone else's profile.
 LINKEDIN_URL = os.getenv("LINKEDIN_URL", "https://www.linkedin.com/in/ybbob/")
 
-CONNECT_GREETING = "Hi from the WeatherWise Agent! Great meeting you at Databricks AI World Tour NYC."
+CONNECT_GREETING = "Hi from the WeatherWise Agent! Great meeting you."
 
 
 def _e164(number: str) -> str:
