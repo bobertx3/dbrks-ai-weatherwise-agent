@@ -63,7 +63,15 @@ export default function AgentChat({ enabled, pending }: { enabled: boolean; pend
       setMessages((m) => [...m.slice(0, -1), fn(m[m.length - 1])]);
 
     try {
-      await streamNDJSON("/api/agent/stream", { messages: history.map(({ role, content }) => ({ role, content })) }, (e) => {
+      await streamNDJSON("/api/agent/stream", {
+        messages: history.map(({ role, content, steps }) => ({
+          role,
+          content,
+          ...(role === "assistant" && steps?.length
+            ? { steps: steps.map(({ id, name, args, output }) => ({ id, name, args, output })) }
+            : {}),
+        })),
+      }, (e) => {
         if (e.type === "call") {
           patch((t) => ({ ...t, steps: [...(t.steps ?? []), { id: e.id, name: e.name, args: e.args, output: null, startedAt: Date.now() }] }));
         } else if (e.type === "output") {

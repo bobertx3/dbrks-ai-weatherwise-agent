@@ -221,9 +221,38 @@ class GenieAsk(BaseModel):
     conversation_id: Optional[str] = None
 
 
+class ChatStep(BaseModel):
+    id: Optional[str] = None
+    name: str
+    args: str = ""
+    output: Optional[str] = None
+
+
 class ChatMessage(BaseModel):
     role: str
     content: str
+    steps: Optional[List[ChatStep]] = None  # tool calls + results from an earlier assistant turn
+
+
+# Earlier turns' tool results are sent back so the agent reuses them instead of re-fetching.
+# Large results are trimmed; the newest turns matter most.
+_HISTORY_OUTPUT_CHARS = 6000
+
+
+def _history_items(messages: List["ChatMessage"]) -> List[Dict[str, Any]]:
+    items: List[Dict[str, Any]] = []
+    for m in messages:
+        if m.role == "assistant" and m.steps:
+            done = [st for st in m.steps if st.id and st.output is not None]
+            for st in done:
+                items.append({"type": "function_call", "call_id": st.id, "name": st.name, "arguments": st.args or "{}"})
+            for st in done:
+                out = st.output or ""
+                if len(out) > _HISTORY_OUTPUT_CHARS:
+                    out = out[:_HISTORY_OUTPUT_CHARS] + " ... (truncated)"
+                items.append({"type": "function_call_output", "call_id": st.id, "output": out})
+        items.append({"role": m.role, "content": m.content})
+    return items
 
 
 class AgentChat(BaseModel):
@@ -527,7 +556,7 @@ def agent_stream(body: AgentChat):
 
     if not SERVING_ENDPOINT:
         return JSONResponse({"detail": "SERVING_ENDPOINT is not configured"}, status_code=503)
-    messages = [m.model_dump() for m in body.messages]
+    messages = _history_items(body.messages)
 
     def gen():
         w = workspace()

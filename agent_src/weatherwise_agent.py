@@ -153,7 +153,7 @@ Ensure temperature-sensitive MedTech shipments are delivered safely and on time 
 SQL ANALYST
 Role: Data analyst focused on MedTech shipment logistics
 Goal: Retrieve shipments (optionally filtered by destination and/or status) and expose the maximum allowable temperatures needed for risk evaluation
-Tool: `get_shipments` – also returns carrier, priority, destination_facility_name, original_eta_date, delay_hours, delay_reason and last_recorded_temp_f
+Tool: `get_shipments(dest_city, shipment_status, p_shipment_id)` – always pass a filter: p_shipment_id for one shipment, dest_city for a city; never call it with no filters. Also returns carrier, priority, destination_facility_name, original_eta_date, delay_hours, delay_reason and last_recorded_temp_f
 Use them:
 - Sensor excursion (already out of spec, regardless of weather): last_recorded_temp_f above temperature_max_f or below temperature_min_f → escalate first.
 - This crew reports WEATHER and TEMPERATURE risk only. Never mention procedures, surgeries or procedure_date.
@@ -244,6 +244,8 @@ ANSWER STYLE (executive audience)
 ---
 
 OPERATING PRINCIPLES
+- Earlier tool calls and their results are part of this conversation. Reuse them: never call a tool again with arguments you already have a result for, and only fetch what is new (e.g. for "now email it", use the shipments, forecast and SOPs you already retrieved).
+- `get_backup_inventory` accepts a product ID (PROD-0002) or name (Cardiac Stent Kit); prefer the ID from `get_shipments`.
 - Be concise, factual, and action-oriented. Always explain *why* using numeric evidence (temperature gaps, limits, etc.).
 - Never output raw tool results without a professional summary.
 - Do not fabricate data. If required data (ETA, destination, or weather) is missing, mark `risk_level = INSUFFICIENT_DATA` and list missing fields.
@@ -345,27 +347,79 @@ def _message_text(ai_message) -> str:
     return str(content) if content is not None else ""
 
 
-def _responses_input_to_chat_messages(input_items) -> list[dict[str, str]]:
+def _item_text(content) -> str:
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and isinstance(part.get("text"), str):
+                parts.append(part["text"])
+        return "".join(parts)
+    return content or ""
+
+
+def _responses_input_to_chat_messages(input_items) -> list:
     """Convert ResponsesAgent input items into LangChain chat messages.
 
-    Some MLflow runtimes do not expose ``to_chat_completions_input``, so keep the
-    conversion local and limited to the message shapes this agent receives.
+    Earlier turns can include `function_call` / `function_call_output` items (the app sends them
+    back), so the model sees the tool results it already has instead of fetching them again.
+    Consecutive function_call items become one AIMessage with tool_calls, each output a ToolMessage.
     """
-    messages = []
+    from langchain_core.messages import AIMessage
+
+    messages: list = []
+    pending: list = []  # function calls waiting to be attached to one AIMessage
+
+    def flush_calls():
+        if pending:
+            messages.append(AIMessage(content="", tool_calls=list(pending)))
+            pending.clear()
+
     for item in input_items:
         data = item.model_dump() if hasattr(item, "model_dump") else dict(item)
-        role = data.get("role", "user")
-        content = data.get("content", "")
-        if isinstance(content, list):
-            text_parts = []
-            for part in content:
-                if isinstance(part, str):
-                    text_parts.append(part)
-                elif isinstance(part, dict) and isinstance(part.get("text"), str):
-                    text_parts.append(part["text"])
-            content = "".join(text_parts)
-        messages.append({"role": role, "content": content or ""})
+        kind = data.get("type")
+        if kind == "function_call":
+            try:
+                args = json.loads(data.get("arguments") or "{}")
+            except (TypeError, ValueError):
+                args = {}
+            pending.append({"id": data.get("call_id"), "name": data.get("name"), "args": args, "type": "tool_call"})
+            continue
+        if kind == "function_call_output":
+            flush_calls()
+            messages.append(ToolMessage(content=str(data.get("output") or ""), tool_call_id=data.get("call_id")))
+            continue
+        flush_calls()
+        messages.append({"role": data.get("role", "user"), "content": _item_text(data.get("content", ""))})
+    flush_calls()
     return messages
+
+
+# Tools with side effects are never served from the cache across turns (a user may ask to resend).
+_SIDE_EFFECT_TOOLS = {"send_email", "send_sms", "send_connect_sms"}
+
+
+def _call_key(name: str, args: dict) -> str:
+    return f"{name}:{json.dumps(args or {}, sort_keys=True, default=str)}"
+
+
+def _history_cache(messages: list) -> dict:
+    """(tool, args) -> result for read-only tool calls already answered earlier in the conversation."""
+    from langchain_core.messages import AIMessage
+
+    by_id = {}
+    for m in messages:
+        if isinstance(m, AIMessage):
+            for tc in m.tool_calls or []:
+                by_id[tc.get("id")] = tc
+    cache = {}
+    for m in messages:
+        if isinstance(m, ToolMessage) and m.tool_call_id in by_id:
+            tc = by_id[m.tool_call_id]
+            if tc.get("name") not in _SIDE_EFFECT_TOOLS:
+                cache[_call_key(tc.get("name"), tc.get("args"))] = m.content
+    return cache
 
 
 def _run_tool(call) -> str:
@@ -402,6 +456,7 @@ class ToolCallingResponsesAgent(ResponsesAgent):
         today = datetime.now(ZoneInfo(os.environ.get("AGENT_TIMEZONE", "America/New_York")))
         date_line = f"\n\nTODAY is {today:%A, %Y-%m-%d}; tomorrow is the next calendar day."
         messages = [{"role": "system", "content": system_prompt + date_line}] + cc_msgs
+        cache = _history_cache(cc_msgs)  # identical calls are answered without re-running the tool
 
         for _ in range(_MAX_TURNS):
             ai_message = _MODEL.invoke(messages)
@@ -437,14 +492,19 @@ class ToolCallingResponsesAgent(ResponsesAgent):
             # so tool spans stay nested under this request's trace.
             results: dict[str, str] = {}
             with ThreadPoolExecutor(max_workers=min(8, len(tool_calls))) as pool:
-                futures = {
-                    pool.submit(contextvars.copy_context().run, _run_tool, call): call
-                    for call in tool_calls
-                }
+                futures = {}
+                for call in tool_calls:
+                    key = _call_key(call.get("name"), call.get("args"))
+                    if key in cache:  # same tool + same arguments already answered: reuse it
+                        fut = pool.submit(lambda v=cache[key]: v)
+                    else:
+                        fut = pool.submit(contextvars.copy_context().run, _run_tool, call)
+                    futures[fut] = call
                 for fut in as_completed(futures):
                     call = futures[fut]
                     obs = fut.result()
                     results[call.get("id")] = obs
+                    cache[_call_key(call.get("name"), call.get("args"))] = obs
                     yield ResponsesAgentStreamEvent(
                         type="response.output_item.done",
                         item=self.create_function_call_output_item(
