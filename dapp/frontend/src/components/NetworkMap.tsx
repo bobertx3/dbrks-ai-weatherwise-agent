@@ -3,6 +3,7 @@ import { CircleMarker, MapContainer, Polyline, TileLayer, Tooltip, ZoomControl, 
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { AlertTriangle, Bot, X } from "lucide-react";
+import { callClass, tempCall } from "../tempCall";
 import { getJSON, type MapFacility, type MapRoute, type MapSite, type NetworkMap as MapData } from "../api";
 
 // Theme colors (mirror styles.css variables; Leaflet paths need literal values)
@@ -37,23 +38,24 @@ type Selected =
   | null;
 
 const nf = new Intl.NumberFormat("en-US");
+const PRI: Record<string, number> = { STAT: 0, Urgent: 1, Routine: 2 };
 // Short list on small screens so the floating card never needs its own scroll.
 const HOT_LIMIT = typeof window !== "undefined" && window.innerHeight < 900 ? 3 : 4;
 
 function facilityColor(f: MapFacility) {
-  if (f.excursions > 0 || f.procedures_at_risk > 0) return C.coral;
+  if (f.excursions > 0) return C.coral;
   if (f.delayed > 0) return C.amber;
   return C.ok;
 }
 
 function routeColor(r: MapRoute) {
-  if (r.excursion || r.misses_procedure) return C.coral;
+  if (r.excursion) return C.coral;
   if (r.status === "Delayed") return C.amber;
   return C.teal;
 }
 
 function isRisk(r: MapRoute) {
-  return r.status === "Delayed" || r.excursion || r.misses_procedure;
+  return r.status === "Delayed" || r.excursion;
 }
 
 /** Fit the view, leaving room on the right for the floating panel so nothing hides under it. */
@@ -141,9 +143,9 @@ export default function NetworkMap({
   const hotList = useMemo(
     () =>
       (data?.routes ?? [])
-        // Same definition as the dashboard, metric view and agent: arrives after the procedure.
-        .filter((r) => r.misses_procedure)
-        .sort((a, b) => a.procedure_date.localeCompare(b.procedure_date) || a.shipment_id.localeCompare(b.shipment_id)),
+        // Sensor already outside the product's range (TOO WARM / TOO COLD), highest priority first.
+        .filter((r) => r.excursion && r.status !== "Delivered")
+        .sort((a, b) => (PRI[a.priority] ?? 3) - (PRI[b.priority] ?? 3) || a.shipment_id.localeCompare(b.shipment_id)),
     [data],
   );
 
@@ -193,7 +195,7 @@ export default function NetworkMap({
                 key={f.facility_id}
                 center={[f.latitude, f.longitude]}
                 radius={f.facility_type === "Hospital" ? 7 : 4.5}
-                pathOptions={{ color: facilityColor(f), fillColor: facilityColor(f), fillOpacity: 0.85, weight: f.procedures_at_risk ? 3 : 1 }}
+                pathOptions={{ color: facilityColor(f), fillColor: facilityColor(f), fillOpacity: 0.85, weight: f.excursions ? 3 : 1 }}
                 eventHandlers={{ click: () => setSelected({ kind: "facility", item: f }) }}
               >
                 <Tooltip direction="top" offset={[0, -6]}>
@@ -258,7 +260,7 @@ export default function NetworkMap({
         </div>
 
         <div className="map-ov map-legend">
-          <span><i style={{ background: C.coral }} /> Excursion / surgery at risk</span>
+          <span><i style={{ background: C.coral }} /> Out of temperature range</span>
           <span><i style={{ background: C.amber }} /> Delayed</span>
           <span><i style={{ background: C.ok }} /> On track</span>
         </div>
@@ -270,16 +272,16 @@ export default function NetworkMap({
             <Details sel={selected} facilityById={facilityById} onClose={() => setSelected(null)} onAskRoute={onAskRoute} />
           ) : panelOpen ? (
             <div className="card tight">
-              <button className="close" onClick={() => setPanelOpen(false)} aria-label="Hide surgeries at risk">
+              <button className="close" onClick={() => setPanelOpen(false)} aria-label="Hide out-of-range list">
                 <X size={14} />
               </button>
               <div className="lbl coral">
-                <AlertTriangle size={11} style={{ verticalAlign: -1 }} /> SURGERIES AT RISK
+                <AlertTriangle size={11} style={{ verticalAlign: -1 }} /> OUT OF RANGE NOW
               </div>
               {!data ? (
                 <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>Loading…</div>
               ) : hotList.length === 0 ? (
-                <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>No procedure-critical risks.</div>
+                <div className="muted" style={{ fontSize: 12.5, marginTop: 8 }}>No shipments out of range.</div>
               ) : (
                 <ul className="hot-list">
                   {hotList.slice(0, HOT_LIMIT).map((r) => (
@@ -292,11 +294,11 @@ export default function NetworkMap({
                     >
                       <div className="hl-top">
                         <span className="mono">{r.shipment_id}</span>
-                        <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: needed for a scheduled procedure, ship immediately" : undefined}>{r.priority}</span>
+                        <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: highest shipping priority" : undefined}>{r.priority}</span>
                       </div>
                       <div className="hl-main">{r.product_name} → {facilityById[r.destination_facility_id]?.facility_name ?? r.destination}</div>
                       <div className="hl-sub">
-                        {`ETA ${r.eta_date} · surgery ${r.procedure_date}`}
+                        {tempCall(r) && <span className={`risk-badge ${callClass(tempCall(r)!)}`}>{tempCall(r)}</span>}{` ${r.last_recorded_temp_f}°F · range ${r.temperature_min_f}–${r.temperature_max_f}°F`}
                       </div>
                     </li>
                   ))}
@@ -306,7 +308,7 @@ export default function NetworkMap({
             </div>
           ) : (
             <button className="ov-reopen" onClick={() => setPanelOpen(true)}>
-              <AlertTriangle size={12} /> Surgeries at risk ({hotList.length})
+              <AlertTriangle size={12} /> Out of range ({hotList.length})
             </button>
           )}
         </div>
@@ -369,7 +371,6 @@ function Details({ sel, facilityById, onClose, onAskRoute }: { sel: NonNullable<
           <Row k="Inbound shipments" v={sel.item.inbound} />
           <Row k="Delayed" v={sel.item.delayed} tone={sel.item.delayed ? "amber" : undefined} />
           <Row k="Temp excursions" v={sel.item.excursions} tone={sel.item.excursions ? "coral" : undefined} />
-          <Row k="Surgeries at risk" v={sel.item.procedures_at_risk} tone={sel.item.procedures_at_risk ? "coral" : undefined} />
         </>
       )}
       {sel.kind === "route" && (
@@ -383,10 +384,9 @@ function Details({ sel, facilityById, onClose, onAskRoute }: { sel: NonNullable<
           <Row k="Status" v={sel.item.status} tone={sel.item.status === "Delayed" ? "amber" : undefined} />
           {sel.item.delay_reason && <Row k="Delay" v={`${sel.item.delay_reason} (+${sel.item.delay_hours}h)`} tone="amber" />}
           <Row k="ETA" v={sel.item.eta_date === sel.item.original_eta_date ? sel.item.eta_date : `${sel.item.eta_date} (was ${sel.item.original_eta_date})`} />
-          <Row k="Surgery" v={sel.item.procedure_date} tone={sel.item.misses_procedure ? "coral" : undefined} />
           <Row
             k="Sensor"
-            v={`${sel.item.last_recorded_temp_f}°F (max ${sel.item.temperature_max_f}°F)`}
+            v={`${sel.item.last_recorded_temp_f}°F (range ${sel.item.temperature_min_f}–${sel.item.temperature_max_f}°F)`}
             tone={sel.item.excursion ? "coral" : undefined}
           />
           <Row k="Distance" v={`${nf.format(sel.item.route_miles)} mi`} />

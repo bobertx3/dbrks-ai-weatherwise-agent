@@ -30,14 +30,14 @@ def kpi(name, title, field, expr, desc):
 layout = []
 layout.append({"widget": text("header", [
     "# WeatherWise · Temperature-controlled logistics insights\n",
-    "**The story:** 130 surgical-supply shipments are in motion. **Weather is the #1 cause of delays**, 11 shipments are already outside their temperature range "
-    "(mostly too warm), and **5 STAT shipments now arrive after their scheduled surgery**, all headed to New York. Use the Filters page to slice by priority, carrier, product or state.\n"]),
+    "**The story:** 130 temperature-sensitive medical shipments are in motion. **11 are already outside their temperature range** (mostly too warm), "
+    "and **weather is the #1 cause of delays**, which keeps more product exposed for longer. Use the Filters page to slice by priority, carrier, product or state.\n"]),
     "position": pos(0, 0, 12, 2)})
 kpis = [
     ("kpi-active", "Active shipments", "sum(is_active)", "SUM(`is_active`)", "Not yet delivered"),
-    ("kpi-delayed", "Delayed", "sum(is_delayed)", "SUM(`is_delayed`)", "Active shipments behind their original ETA"),
-    ("kpi-excursions", "Temperature excursions", "sum(is_excursion)", "SUM(`is_excursion`)", "Latest sensor reading outside the product's range"),
-    ("kpi-surgery", "Surgeries at risk", "sum(misses_surgery)", "SUM(`misses_surgery`)", "Arrives after the scheduled procedure"),
+    ("kpi-excursions", "Out of range now", "sum(is_excursion)", "SUM(`is_excursion`)", "Sensor reading TOO WARM or TOO COLD for the product"),
+    ("kpi-delayed", "Delayed (all causes)", "sum(is_delayed)", "SUM(`is_delayed`)", "Active shipments behind their original ETA"),
+    ("kpi-weather-delay", "Delayed by weather", "sum(is_weather_delay)", "SUM(`is_weather_delay`)", "Snow, storms, heavy rain"),
 ]
 for i, (n, t, f, e, d) in enumerate(kpis):
     layout.append({"widget": kpi(n, t, f, e, d), "position": pos(3 * i, 2, 3, 3)})
@@ -51,7 +51,7 @@ layout.append({"widget": W("arrivals", q("ds_ship", [("daily(eta_date)", 'DATE_T
                    "color": {"fieldName": "status", "scale": {"type": "categorical", "mappings": status_colors}, "displayName": "Status"}},
      "annotations": [{"type": "vertical-line", "encodings": {"x": {"dataValue": "2026-11-19T00:00:00.000", "dataType": "DATETIME"},
                       "label": {"value": "Today"}, "color": {"value": {"hex": AMBER}}}}],
-     "frame": frame("Shipments by arrival date", "Delayed volume piles up on Nov 21, the day after the NYC surgeries")}),
+     "frame": frame("Shipments by arrival date", "Delayed shipments stay in transit longer, so they face more of the weather")}),
     "position": pos(0, 5, 8, 6)})
 cause_colors = [{"value": "Weather", "color": CORAL}, {"value": "Dock hold", "color": AMBER}, {"value": "Carrier & network", "color": BLUE},
                 {"value": "Equipment", "color": VIOLET}, {"value": "Paperwork", "color": SOFT}]
@@ -68,7 +68,7 @@ layout.append({"widget": W("excursions", q("ds_ship", [("product", "`product`"),
      "encodings": {"x": {"fieldName": "sum(is_excursion)", "scale": {"type": "quantitative"}, "displayName": "Shipments out of range"},
                    "y": {"fieldName": "product", "scale": {"type": "categorical", "sort": {"by": "value"}}, "displayName": "Product"},
                    "color": {"fieldName": "temp_status", "scale": {"type": "categorical", "mappings": [{"value": "Too warm", "color": CORAL}, {"value": "Too cold", "color": BLUE}]}, "displayName": "Excursion"}},
-     "frame": frame("Temperature excursions by product", "Latest sensor reading vs each product's own range")}),
+     "frame": frame("Out of range by product: too warm vs too cold", "Latest sensor reading vs each product's own range")}),
     "position": pos(0, 11, 6, 6)})
 layout.append({"widget": W("carrier-delays", q("ds_ship", [("carrier", "`carrier`"), ("delay_cause", "`delay_cause`"), ("sum(is_delayed)", "SUM(`is_delayed`)")], filters=["`is_delayed` = 1"]),
     {"version": 3, "widgetType": "bar",
@@ -94,16 +94,16 @@ layout.append({"widget": W("inv-heat", q("ds_inv", [("product", "`product`"), ("
      "frame": frame("Backup stock: units on hand by product and state", "Gaps = no backup nearby; NY has only 4 aortic valves")}),
     "position": pos(7, 17, 5, 7)})
 cols = [("shipment_id", "Shipment"), ("priority", "Priority"), ("product", "Product"), ("facility", "Destination"), ("status", "Status"),
-        ("eta_date", "ETA"), ("procedure_date", "Surgery"), ("sensor_f", "Sensor °F"), ("temp_status", "Temperature"), ("delay_reason", "Delay reason")]
+        ("eta_date", "ETA"), ("sensor_f", "Sensor °F"), ("min_f", "Min °F"), ("max_f", "Max °F"), ("temp_status", "Temperature"), ("delay_reason", "Delay reason")]
 table_cols = []
 for f, d in cols:
     c = {"fieldName": f, "displayName": d}
     if f == "temp_status":
         c["style"] = {"type": "basic", "rules": [{"condition": {"operand": {"type": "data-value", "value": "In range"}, "operator": "!="}, "backgroundColor": {"hex": "#5A2A24"}}]}
     table_cols.append(c)
-layout.append({"widget": W("at-risk-table", q("ds_ship", [(f, f"`{f}`") for f, _ in cols], disagg=True, filters=["`is_excursion` = 1 OR `misses_surgery` = 1"]),
+layout.append({"widget": W("at-risk-table", q("ds_ship", [(f, f"`{f}`") for f, _ in cols], disagg=True, filters=["`is_excursion` = 1 OR `is_weather_delay` = 1"]),
     {"version": 2, "widgetType": "table", "encodings": {"columns": table_cols},
-     "frame": frame("At-risk shipments", "Out of temperature range, or arriving after the scheduled surgery")}),
+     "frame": frame("Weather & temperature risk", "Out of range now, or held by weather in transit")}),
     "position": pos(0, 24, 12, 7)})
 
 def flt(name, field, title):

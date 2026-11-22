@@ -5,7 +5,7 @@ SELECT shipment_id, product_name,
        WHEN product_name ILIKE '%cornea%' THEN 'Corneal graft' ELSE product_name END AS product,
   status, priority, carrier, origin, destination, destination_facility_name AS facility, destination_facility_type AS facility_type,
   split(destination, ', ')[1] AS dest_state, destination_latitude AS lat, destination_longitude AS lon,
-  CAST(eta_date AS DATE) AS eta_date, CAST(procedure_date AS DATE) AS procedure_date,
+  CAST(eta_date AS DATE) AS eta_date,
   COALESCE(delay_hours, 0) AS delay_hours, delay_reason,
   CASE WHEN COALESCE(delay_hours, 0) = 0 THEN 'On time'
        WHEN delay_reason RLIKE '(?i)snow|storm|rain|atmospheric|thunder' THEN 'Weather'
@@ -19,5 +19,5 @@ SELECT shipment_id, product_name,
   CASE WHEN status <> 'Delivered' THEN 1 ELSE 0 END AS is_active,
   CASE WHEN status <> 'Delivered' AND status = 'Delayed' THEN 1 ELSE 0 END AS is_delayed,
   CASE WHEN status <> 'Delivered' AND (last_recorded_temp_f > temperature_max_f OR last_recorded_temp_f < temperature_min_f) THEN 1 ELSE 0 END AS is_excursion,
-  CASE WHEN status <> 'Delivered' AND eta_date > procedure_date THEN 1 ELSE 0 END AS misses_surgery
+  CASE WHEN status = 'Delayed' AND delay_reason RLIKE '(?i)snow|storm|rain|atmospheric|thunder' THEN 1 ELSE 0 END AS is_weather_delay
 FROM shipments

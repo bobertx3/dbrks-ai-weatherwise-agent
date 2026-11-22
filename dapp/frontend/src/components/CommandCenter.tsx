@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bot } from "lucide-react";
 import { getJSON, type MapRoute, type NetworkMap as MapData, type Overview } from "../api";
 import NetworkMap from "./NetworkMap";
+import { callClass, tempCall } from "../tempCall";
 import InventoryGrid from "./InventoryGrid";
 import { Kpi, Skeleton } from "./Dashboard";
 
@@ -10,20 +11,21 @@ const STATUS_TONE: Record<string, string> = { "In-Transit": "var(--teal)", Delay
 const nf = new Intl.NumberFormat("en-US");
 const ROW_LIMIT = 12; // riskiest first; the rest behind "Show all"
 
-/** Risk first: surgery missed, then sensor excursion, then delayed; then soonest ETA. */
+/** Risk first: sensor already out of range, then delayed (longer weather exposure); then soonest ETA. */
+const PRI: Record<string, number> = { STAT: 0, Urgent: 1, Routine: 2 };
 function riskRank(r: MapRoute) {
-  return r.misses_procedure ? 0 : r.excursion ? 1 : r.status === "Delayed" ? 2 : 3;
+  return (r.excursion ? 0 : r.status === "Delayed" ? 10 : 20) + (PRI[r.priority] ?? 3);
 }
 
+
 function askFor(r: MapRoute): string {
-  const why = r.misses_procedure
-    ? `It is due ${r.eta_date}, after the ${r.procedure_date} procedure.`
-    : r.excursion
-      ? `Its sensor reads ${r.last_recorded_temp_f}°F against a ${r.temperature_max_f}°F max.`
-      : r.status === "Delayed"
-        ? `It is delayed ${r.delay_hours}h${r.delay_reason ? ` (${r.delay_reason})` : ""}.`
-        : "";
-  return `Assess shipment ${r.shipment_id} (${r.product_name}, ${r.origin} → ${r.destination}). ${why} What is the risk, what does the supplier SOP say, and is there backup inventory nearby? No email or SMS.`;
+  const call = tempCall(r);
+  const why = call
+    ? `Its sensor reads ${r.last_recorded_temp_f}°F (${call}; range ${r.temperature_min_f}–${r.temperature_max_f}°F).`
+    : r.status === "Delayed"
+      ? `It is delayed ${r.delay_hours}h${r.delay_reason ? ` (${r.delay_reason})` : ""}.`
+      : "";
+  return `Assess shipment ${r.shipment_id} (${r.product_name}, ${r.origin} → ${r.destination}). ${why} Is it at weather or temperature risk on arrival (sensor and destination forecast)? What does the supplier SOP say, and is there backup stock nearby? No email or SMS.`;
 }
 
 export default function CommandCenter({
@@ -156,9 +158,8 @@ export default function CommandCenter({
                   <th>Shipment</th>
                   <th>Product · route</th>
                   <th>Status</th>
-                  <th className="col-pri" title="STAT: needed for a scheduled procedure, ship immediately">Priority</th>
+                  <th className="col-pri" title="STAT ships first, then Urgent">Priority</th>
                   <th className="col-eta">ETA</th>
-                  <th>Surgery</th>
                   <th className="num">Sensor °F</th>
                   <th aria-label="Ask agent" />
                 </tr>
@@ -176,15 +177,15 @@ export default function CommandCenter({
                       {r.status === "Delayed" && r.delay_hours > 0 && <span className="muted small"> +{r.delay_hours}h</span>}
                     </td>
                     <td className="col-pri">
-                      <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: needed for a scheduled procedure, ship immediately" : undefined}>
+                      <span className={`pill ${r.priority === "STAT" ? "stat" : ""}`} title={r.priority === "STAT" ? "STAT: highest shipping priority" : undefined}>
                         {r.priority}
                       </span>
                     </td>
                     <td className="mono col-eta">{String(r.eta_date).slice(0, 10)}</td>
-                    <td className={`mono ${r.misses_procedure ? "miss" : ""}`} title={r.misses_procedure ? "Arrives after the procedure" : undefined}>
-                      {r.procedure_date ? String(r.procedure_date).slice(0, 10) : "—"}
+                    <td className={`num ${r.excursion ? "hot" : "mono"}`}>
+                      {r.last_recorded_temp_f ?? "—"}
+                      {tempCall(r) && <span className={`risk-badge ${callClass(tempCall(r)!)} tbl`}>{tempCall(r)}</span>}
                     </td>
-                    <td className={`num ${r.excursion ? "hot" : "mono"}`}>{r.last_recorded_temp_f ?? "—"}</td>
                     <td>
                       <button
                         className="row-ask"

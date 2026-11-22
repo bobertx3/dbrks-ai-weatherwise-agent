@@ -155,6 +155,7 @@ export type MapRoute = {
   delay_reason: string | null;
   last_recorded_temp_f: number;
   temperature_max_f: number;
+  temperature_min_f: number | null;
   destination_facility_id: string;
   route_miles: number;
   origin_latitude: number;

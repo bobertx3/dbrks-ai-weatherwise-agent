@@ -811,3 +811,5 @@ html, body, #root { height: auto; min-height: 100%; }
 }
 .risk-badge.warm { background: rgba(242, 114, 94, 0.18); color: #ff8a73; border: 1px solid rgba(242, 114, 94, 0.55); }
 .risk-badge.cold { background: rgba(111, 156, 242, 0.18); color: #9dbcff; border: 1px solid rgba(111, 156, 242, 0.55); }
+.risk-badge.tbl { margin-left: 6px; font-size: 9.5px; padding: 0 5px; }
+.hot-list .hl-sub .risk-badge { margin-right: 4px; font-size: 9.5px; }

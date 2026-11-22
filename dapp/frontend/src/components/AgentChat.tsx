@@ -152,7 +152,7 @@ type Meta = { title: string; source: string; desc: string; icon: typeof Database
 
 const TOOLS: Record<string, Meta> = {
   get_shipments: { title: "Pull live shipments", source: "Unity Catalog function", kind: "uc", icon: Database,
-    desc: "Reads shipment status, ETA, sensor temperature, product range and surgery date from governed tables." },
+    desc: "Reads shipment status, ETA, sensor temperature, product range and destination from governed tables." },
   check_weather: { title: "Check destination forecast", source: "Open-Meteo weather API", kind: "api", icon: CloudSun,
     desc: "Current conditions plus a 7-day high/low for the destination city, so the ETA day is covered." },
   temp_gap: { title: "Compute temperature gap", source: "Unity Catalog function", kind: "uc", icon: Thermometer,

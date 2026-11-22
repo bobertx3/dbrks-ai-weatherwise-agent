@@ -654,7 +654,7 @@ def network_map() -> Dict[str, Any]:
         **{k: s.get(k) for k in (
             "shipment_id", "product_name", "origin", "destination", "carrier", "status", "priority",
             "eta_date", "original_eta_date", "procedure_date", "delay_hours", "delay_reason",
-            "last_recorded_temp_f", "temperature_max_f", "destination_facility_id", "route_miles",
+            "last_recorded_temp_f", "temperature_max_f", "temperature_min_f", "destination_facility_id", "route_miles",
             "origin_latitude", "origin_longitude", "destination_latitude", "destination_longitude")},
         "excursion": excursion(s),
         "misses_procedure": misses_procedure(s),

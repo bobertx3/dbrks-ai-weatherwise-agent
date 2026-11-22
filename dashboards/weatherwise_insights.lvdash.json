@@ -11,7 +11,7 @@
         "       WHEN product_name ILIKE '%cornea%' THEN 'Corneal graft' ELSE product_name END AS product,\n",
         "  status, priority, carrier, origin, destination, destination_facility_name AS facility, destination_facility_type AS facility_type,\n",
         "  split(destination, ', ')[1] AS dest_state, destination_latitude AS lat, destination_longitude AS lon,\n",
-        "  CAST(eta_date AS DATE) AS eta_date, CAST(procedure_date AS DATE) AS procedure_date,\n",
+        "  CAST(eta_date AS DATE) AS eta_date,\n",
         "  COALESCE(delay_hours, 0) AS delay_hours, delay_reason,\n",
         "  CASE WHEN COALESCE(delay_hours, 0) = 0 THEN 'On time'\n",
         "       WHEN delay_reason RLIKE '(?i)snow|storm|rain|atmospheric|thunder' THEN 'Weather'\n",
@@ -25,7 +25,7 @@
         "  CASE WHEN status <> 'Delivered' THEN 1 ELSE 0 END AS is_active,\n",
         "  CASE WHEN status <> 'Delivered' AND status = 'Delayed' THEN 1 ELSE 0 END AS is_delayed,\n",
         "  CASE WHEN status <> 'Delivered' AND (last_recorded_temp_f > temperature_max_f OR last_recorded_temp_f < temperature_min_f) THEN 1 ELSE 0 END AS is_excursion,\n",
-        "  CASE WHEN status <> 'Delivered' AND eta_date > procedure_date THEN 1 ELSE 0 END AS misses_surgery\n",
+        "  CASE WHEN status = 'Delayed' AND delay_reason RLIKE '(?i)snow|storm|rain|atmospheric|thunder' THEN 1 ELSE 0 END AS is_weather_delay\n",
         "FROM shipments\n"
       ]
     },
@@ -56,7 +56,7 @@
             "multilineTextboxSpec": {
               "lines": [
                 "# WeatherWise \u00b7 Temperature-controlled logistics insights\n",
-                "**The story:** 130 surgical-supply shipments are in motion. **Weather is the #1 cause of delays**, 11 shipments are already outside their temperature range (mostly too warm), and **5 STAT shipments now arrive after their scheduled surgery**, all headed to New York. Use the Filters page to slice by priority, carrier, product or state.\n"
+                "**The story:** 130 temperature-sensitive medical shipments are in motion. **11 are already outside their temperature range** (mostly too warm), and **weather is the #1 cause of delays**, which keeps more product exposed for longer. Use the Filters page to slice by priority, carrier, product or state.\n"
               ]
             }
           },
@@ -111,48 +111,6 @@
         },
         {
           "widget": {
-            "name": "kpi-delayed",
-            "queries": [
-              {
-                "name": "main_query",
-                "query": {
-                  "datasetName": "ds_ship",
-                  "fields": [
-                    {
-                      "name": "sum(is_delayed)",
-                      "expression": "SUM(`is_delayed`)"
-                    }
-                  ],
-                  "disaggregated": false
-                }
-              }
-            ],
-            "spec": {
-              "version": 2,
-              "widgetType": "counter",
-              "encodings": {
-                "value": {
-                  "fieldName": "sum(is_delayed)",
-                  "displayName": "Delayed"
-                }
-              },
-              "frame": {
-                "showTitle": true,
-                "title": "Delayed",
-                "showDescription": true,
-                "description": "Active shipments behind their original ETA"
-              }
-            }
-          },
-          "position": {
-            "x": 3,
-            "y": 2,
-            "width": 3,
-            "height": 3
-          }
-        },
-        {
-          "widget": {
             "name": "kpi-excursions",
             "queries": [
               {
@@ -175,14 +133,56 @@
               "encodings": {
                 "value": {
                   "fieldName": "sum(is_excursion)",
-                  "displayName": "Temperature excursions"
+                  "displayName": "Out of range now"
                 }
               },
               "frame": {
                 "showTitle": true,
-                "title": "Temperature excursions",
+                "title": "Out of range now",
                 "showDescription": true,
-                "description": "Latest sensor reading outside the product's range"
+                "description": "Sensor reading TOO WARM or TOO COLD for the product"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 2,
+            "width": 3,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "kpi-delayed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_ship",
+                  "fields": [
+                    {
+                      "name": "sum(is_delayed)",
+                      "expression": "SUM(`is_delayed`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(is_delayed)",
+                  "displayName": "Delayed (all causes)"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Delayed (all causes)",
+                "showDescription": true,
+                "description": "Active shipments behind their original ETA"
               }
             }
           },
@@ -195,7 +195,7 @@
         },
         {
           "widget": {
-            "name": "kpi-surgery",
+            "name": "kpi-weather-delay",
             "queries": [
               {
                 "name": "main_query",
@@ -203,8 +203,8 @@
                   "datasetName": "ds_ship",
                   "fields": [
                     {
-                      "name": "sum(misses_surgery)",
-                      "expression": "SUM(`misses_surgery`)"
+                      "name": "sum(is_weather_delay)",
+                      "expression": "SUM(`is_weather_delay`)"
                     }
                   ],
                   "disaggregated": false
@@ -216,15 +216,15 @@
               "widgetType": "counter",
               "encodings": {
                 "value": {
-                  "fieldName": "sum(misses_surgery)",
-                  "displayName": "Surgeries at risk"
+                  "fieldName": "sum(is_weather_delay)",
+                  "displayName": "Delayed by weather"
                 }
               },
               "frame": {
                 "showTitle": true,
-                "title": "Surgeries at risk",
+                "title": "Delayed by weather",
                 "showDescription": true,
-                "description": "Arrives after the scheduled procedure"
+                "description": "Snow, storms, heavy rain"
               }
             }
           },
@@ -332,7 +332,7 @@
                 "showTitle": true,
                 "title": "Shipments by arrival date",
                 "showDescription": true,
-                "description": "Delayed volume piles up on Nov 21, the day after the NYC surgeries"
+                "description": "Delayed shipments stay in transit longer, so they face more of the weather"
               }
             }
           },
@@ -513,7 +513,7 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Temperature excursions by product",
+                "title": "Out of range by product: too warm vs too cold",
                 "showDescription": true,
                 "description": "Latest sensor reading vs each product's own range"
               }
@@ -821,12 +821,16 @@
                       "expression": "`eta_date`"
                     },
                     {
-                      "name": "procedure_date",
-                      "expression": "`procedure_date`"
-                    },
-                    {
                       "name": "sensor_f",
                       "expression": "`sensor_f`"
+                    },
+                    {
+                      "name": "min_f",
+                      "expression": "`min_f`"
+                    },
+                    {
+                      "name": "max_f",
+                      "expression": "`max_f`"
                     },
                     {
                       "name": "temp_status",
@@ -840,7 +844,7 @@
                   "disaggregated": true,
                   "filters": [
                     {
-                      "expression": "`is_excursion` = 1 OR `misses_surgery` = 1"
+                      "expression": "`is_excursion` = 1 OR `is_weather_delay` = 1"
                     }
                   ]
                 }
@@ -876,12 +880,16 @@
                     "displayName": "ETA"
                   },
                   {
-                    "fieldName": "procedure_date",
-                    "displayName": "Surgery"
-                  },
-                  {
                     "fieldName": "sensor_f",
                     "displayName": "Sensor \u00b0F"
+                  },
+                  {
+                    "fieldName": "min_f",
+                    "displayName": "Min \u00b0F"
+                  },
+                  {
+                    "fieldName": "max_f",
+                    "displayName": "Max \u00b0F"
                   },
                   {
                     "fieldName": "temp_status",
@@ -912,9 +920,9 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "At-risk shipments",
+                "title": "Weather & temperature risk",
                 "showDescription": true,
-                "description": "Out of temperature range, or arriving after the scheduled surgery"
+                "description": "Out of range now, or held by weather in transit"
               }
             }
           },

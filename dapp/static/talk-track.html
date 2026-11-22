@@ -83,7 +83,7 @@
     <li>
       <div class="step-h"><h2>Open</h2><span class="time">2 min</span></div>
       <div class="row"><span class="k do">DO</span><span>Click <b>Problem &amp; Solution</b>, then close it on the Command Center.</span></div>
-      <div class="row"><span class="k say">SAY</span><span class="say-txt">"Heart valves, coated stents and tissue grafts are ruined if they get too warm or too cold. When that happens the product is scrapped and the surgery is cancelled. WeatherWise watches every shipment, checks the forecast where it's landing, and acts before it spoils."</span></div>
+      <div class="row"><span class="k say">SAY</span><span class="say-txt">"Heart valves, coated stents and tissue grafts are ruined if they get too warm or too cold. A heat wave, a freeze or a storm hold where a shipment is landing can push it out of range, and the product is scrapped. WeatherWise reads each shipment's temperature logger, checks the forecast at the destination, and calls out TOO WARM or TOO COLD before it spoils."</span></div>
     </li>
     <li>
       <div class="step-h"><h2>Pick a demo track</h2><span class="time">5–8 min</span></div>
@@ -119,7 +119,7 @@
       <div class="step-h"><h2>Close</h2><span class="time">2 min</span></div>
       <div class="row"><span class="k do">DO</span><span>Click <b>Data Flow</b> if they ask how it's built, then <b>Outcome Maps</b>.</span></div>
       <div class="row"><span class="k say">SAY</span><span class="say-txt">"Every shipment carries a temperature logger. Those readings stream straight into a Delta table through Zerobus Ingest, record by record over gRPC, with no Kafka to run. That's the sensor reading the agent checks against each product's range."</span></div>
-      <div class="row"><span class="k say">SAY</span><span class="say-txt">"Fewer scrapped products and cancelled surgeries, on one governed platform: Unity Catalog, Lakebase, Model Serving, the Unity AI Gateway and MLflow."</span></div>
+      <div class="row"><span class="k say">SAY</span><span class="say-txt">"Fewer scrapped products and faster escalations when the weather turns, on one governed platform: Unity Catalog, Lakebase, Model Serving, the Unity AI Gateway and MLflow."</span></div>
     </li>
   </ol>
 </section>
@@ -161,12 +161,12 @@
 
   <details>
     <summary>What dates is the story built around?</summary>
-    <div class="ans">The data is set to a demo date of <b>Nov 19, 2026</b>. The NYC headline shipments (SHP-30001 to 30004) are STAT, with surgery on <b>Nov 20</b> and delayed arrival on Nov 21. "Tomorrow" in the starter prompts lines up on Nov 19. On other days, ask about shipments "at risk" without a date. To move the story, change <code>DEMO_DATE</code> in <code>data/generate_synthetic_data.py</code> and rerun the setup job.</div>
+    <div class="ans">The data is set to a demo date of <b>Nov 19, 2026</b>. The NYC headline shipments (SHP-30001 to 30003) are STAT and already out of range: a heart valve TOO COLD on a JFK dock, a fibrin sealant thawing, a coated stent TOO WARM. "Tomorrow" in the starter prompts lines up on Nov 19. On other days, ask about shipments "at risk" without a date. To move the story, change <code>DEMO_DATE</code> in <code>data/generate_synthetic_data.py</code> and rerun the setup job.</div>
   </details>
 
   <details>
     <summary>What does STAT mean?</summary>
-    <div class="ans">The shipment is needed for a scheduled procedure, so it ships immediately. Priority (STAT / Urgent / Routine) comes from the hospital order. In this synthetic data it's generated alongside the surgery date. The agent ranks STAT first.</div>
+    <div class="ans">STAT is the highest shipping priority, then Urgent, then Routine. Priority comes from the hospital order; the agent lists STAT first when several shipments are at risk.</div>
   </details>
 
   <details>
@@ -182,7 +182,6 @@
       <ul>
         <li><b>Out of range now</b> (sensor outside the product's range) → AT_RISK, whatever the weather.</li>
         <li><b>Forecast</b> on the arrival day vs the product's range: gap ≥ 20°F → AT_RISK, 10–19°F → BORDERLINE, &lt;10°F → not at risk.</li>
-        <li><b>Surgery at risk</b> → arrival after the procedure date.</li>
       </ul>
       The temperature gap is a Unity Catalog SQL function ("rules, not AI"). The LLM orchestrates and explains.
     </div>
@@ -190,7 +189,7 @@
 
   <details>
     <summary>Why doesn't it mention backup stock or lot expiry?</summary>
-    <div class="ans">For execs, "at risk" answers stay short: temperature issues and surgery impact only. Ask for more: <i>"Find backup stock for the at-risk shipments"</i>, or use Genie for lot expiry and inventory questions.</div>
+    <div class="ans">For execs, "at risk" answers stay short: weather and temperature only: TOO WARM or TOO COLD, from the sensor or the destination forecast. Ask for more: <i>"Find backup stock for the at-risk shipments"</i>, or use Genie for lot expiry and inventory questions.</div>
   </details>
 
   <details>

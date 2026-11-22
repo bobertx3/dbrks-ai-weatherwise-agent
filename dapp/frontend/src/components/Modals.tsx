@@ -59,9 +59,9 @@ export function ProblemSolutionModal({ onClose }: { onClose: () => void }) {
       <div className="ps-hero">
         <div className="ps-hero-box p">
           <div className="ps-tag">PROBLEM</div>
-          <p>Temperature-controlled shipments for surgery fail in transit before anyone acts.</p>
+          <p>Temperature-sensitive medical shipments spoil in transit before anyone acts.</p>
           <div className="ps-sub">
-            Implants, heart valves, biologics, and vaccines. Heat, storms, or a delay can spoil the product, and the surgery gets postponed.
+            Implants, heart valves, biologics, and vaccines. A heat wave, a freeze or a storm hold at the destination can push a product outside its range, and it has to be scrapped.
           </div>
         </div>
         <div className="ps-hero-box s">
