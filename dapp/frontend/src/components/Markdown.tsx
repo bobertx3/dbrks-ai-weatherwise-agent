@@ -7,13 +7,34 @@ import type { ReactNode } from "react";
 
 const INLINE = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/g;
 
+// Temperature calls are the headline of an at-risk answer: render them as badges.
+const RISK = /\b(too warm|too hot|too cold|thawing|heat|freeze|freezing)\b/gi;
+const RISK_KIND: Record<string, "warm" | "cold"> = {
+  "too warm": "warm", "too hot": "warm", heat: "warm", thawing: "warm",
+  "too cold": "cold", freeze: "cold", freezing: "cold",
+};
+
+function badges(text: string, keyBase: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(RISK)) {
+    const word = m[0].toLowerCase();
+    if (m.index! > last) out.push(text.slice(last, m.index));
+    const label = word === "heat" ? "TOO WARM" : word === "freeze" || word === "freezing" ? "TOO COLD" : word.toUpperCase();
+    out.push(<span key={`${keyBase}-r${m.index}`} className={`risk-badge ${RISK_KIND[word]}`}>{label}</span>);
+    last = m.index! + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
 function inline(text: string, keyBase: string): ReactNode[] {
-  return text.split(INLINE).filter(Boolean).map((part, i) => {
+  return text.split(INLINE).filter(Boolean).flatMap((part, i): ReactNode[] => {
     const key = `${keyBase}-${i}`;
-    if (part.startsWith("**") && part.endsWith("**")) return <strong key={key}>{part.slice(2, -2)}</strong>;
-    if (part.startsWith("`") && part.endsWith("`")) return <code key={key}>{part.slice(1, -1)}</code>;
-    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) return <em key={key}>{part.slice(1, -1)}</em>;
-    return part;
+    if (part.startsWith("**") && part.endsWith("**")) return [<strong key={key}>{badges(part.slice(2, -2), key)}</strong>];
+    if (part.startsWith("`") && part.endsWith("`")) return [<code key={key}>{part.slice(1, -1)}</code>];
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) return [<em key={key}>{badges(part.slice(1, -1), key)}</em>];
+    return badges(part, key);
   });
 }
 

@@ -137,7 +137,7 @@ export function OutcomeMapModal({ onClose }: { onClose: () => void }) {
 }
 
 // ── Data Flow (left → right, after the trial-recruitment architecture) ─────
-function Box({ title, sub, note, tone }: { title: string; sub?: string; note?: string; tone?: "data" | "agent" | "genie" | "app" | "ml" | "gw" | "llm" | "sem" }) {
+function Box({ title, sub, note, tone }: { title: string; sub?: string; note?: string; tone?: "data" | "agent" | "genie" | "app" | "ml" | "gw" | "llm" | "sem" | "stream" }) {
   return (
     <div className={`df-box ${tone ? `df-${tone}` : ""}`}>
       <div className="t">{title}</div>
@@ -175,7 +175,7 @@ export function DataFlowModal({ onClose }: { onClose: () => void }) {
       onClose={onClose}
       wide
       compact
-      footer="01 load data · 02 UC functions · 03 vector index · 04 evaluate + register · 05 deploy agent · 06 deploy app"
+      footer="01 load data + stream sensors · 02 UC functions · 03 vector index · 04 evaluate + register · 05 deploy agent · 06 deploy app"
     >
       <div className="df">
         <div className="df-col">
@@ -184,14 +184,17 @@ export function DataFlowModal({ onClose }: { onClose: () => void }) {
           <Box title="Inventory" sub="sites · lots · expiry" />
           <Box title="Suppliers" sub="contacts · escalation" />
           <Box title="Supplier SOPs" sub="escalation documents" />
+          <div className="lbl">STREAMING · DEVICES</div>
+          <Box tone="stream" title="Shipment sensor loggers" sub="temperature · humidity · GPS, every few minutes" />
+          <Box tone="stream" title="Zerobus Ingest" sub="gRPC record-by-record → Delta, no Kafka" note="Lands directly in shipment_sensor_readings" />
         </div>
 
-        <Link label="Lakeflow Job" />
+        <Link label="Lakeflow Job · Zerobus" />
 
         <div className="df-col df-group uc">
           <div className="lbl g">UNITY CATALOG · GOVERNED LAKEHOUSE</div>
           <div className="lbl">DATA</div>
-          <Box tone="data" title="Delta tables" sub="shipments · inventory · suppliers · supplier_sops" />
+          <Box tone="data" title="Delta tables" sub="shipments · inventory · suppliers · supplier_sops · shipment_sensor_readings (streaming)" />
           <div className="lbl">AI ASSETS</div>
           <Box title="Vector Search index" sub="supplier_sops_vs_index" />
           <Box title="UC functions" sub="the agent's governed SQL tools" />
@@ -240,7 +243,9 @@ export function DataFlowModal({ onClose }: { onClose: () => void }) {
 
         <div className="df-col">
           <div className="lbl">EXPERIENCE</div>
-          <Box tone="app" title="Databricks App" sub="dashboard · agent chat · Ask Genie" />
+          <Box tone="data" title="Lakebase" sub="synced tables · sub-second app reads" />
+          <Box tone="app" title="Databricks App" sub="command center · agent chat · Ask Genie" />
+          <Box title="AI/BI dashboard" sub="WeatherWise Supply Chain Insights" />
           <Box title="Supply chain coordinator" sub="reviews · approves · escalates" />
         </div>
       </div>

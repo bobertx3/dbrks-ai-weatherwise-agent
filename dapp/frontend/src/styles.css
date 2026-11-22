@@ -801,3 +801,13 @@ html, body, #root { height: auto; min-height: 100%; }
   .cc-table td.prod { width: 210px; max-width: 210px; }
   .cc-rows thead th { position: static; }
 }
+.df-box.df-stream { border-color: rgba(230, 171, 75, 0.6); background: rgba(230, 171, 75, 0.07); }
+.df-box.df-stream .t { color: #f1c27a; }
+
+/* TOO WARM / TOO COLD callouts in agent answers */
+.risk-badge {
+  display: inline-block; padding: 0 7px; margin: 0 1px; border-radius: 5px; font-weight: 700; font-size: 0.86em;
+  letter-spacing: 0.04em; line-height: 1.55; vertical-align: 1px; white-space: nowrap;
+}
+.risk-badge.warm { background: rgba(242, 114, 94, 0.18); color: #ff8a73; border: 1px solid rgba(242, 114, 94, 0.55); }
+.risk-badge.cold { background: rgba(111, 156, 242, 0.18); color: #9dbcff; border: 1px solid rgba(111, 156, 242, 0.55); }

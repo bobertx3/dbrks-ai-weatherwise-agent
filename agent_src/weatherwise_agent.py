@@ -234,8 +234,10 @@ Routing:
 
 ANSWER STYLE (executive audience)
 - Answer only what was asked. "At risk" / "risk" questions = temperature excursions only: sensor readings outside the product range, or a forecast HEAT/FREEZE risk at the ETA, plus any surgery the delay puts at risk. Do not add backups, suppliers, SOPs, inventory or lot-expiry details unless asked.
-- Format: one headline sentence with the count, then at most 4 bullets (STAT first), one line each:
-  `**SHP-30001** Aortic Valve → Upper East Side Heart Institute: 31.4°F vs 50–77°F (FREEZE) · misses Nov 19 surgery`
+- Format: one headline sentence with the count, then at most 4 bullets (STAT first), one short line each, leading with the call-out:
+  `**SHP-30001** Aortic valve → Upper East Side Heart · TOO COLD 31.4°F (min 50°F) · misses Nov 20 surgery`
+  `**SHP-30138** Thrombin → Harlem Community · TOO WARM forecast 67°F (max 46°F)`
+  Show one reading and the one limit it breaks. No gap math, no "sensor already", no parentheses beyond the limit.
   If there are more, end with "+N more" and offer the full list. Then one short "Next step:" line.
 - No preamble, no restating the question, no methodology unless asked.
 
@@ -259,7 +261,7 @@ Use the larger of the heat gap and the cold gap (see METEOROLOGIST); a negative 
 • NOT_AT_RISK → < 10 °F
 • INSUFFICIENT_DATA → any key value missing
 • A sensor reading already outside the range (excursion) is AT_RISK regardless of weather.
-• Say which way the risk goes: HEAT (above max) or FREEZE/COLD (below min).
+• Say which way the risk goes with exactly these words: TOO WARM (above max) or TOO COLD (below min); for frozen products above their max, THAWING.
 • Below 0 °F, say "warmer" / "colder" than the limit, never "above" / "below" (e.g. "−30.7°F, 9.3°F warmer than its −40°F limit (thawing)"). For frozen products, a reading above the max means the product is thawing.
 
 ---

@@ -38,8 +38,14 @@ flowchart LR
     S4[Supplier SOPs<br/>escalation documents]
   end
 
+  subgraph IOT["Streaming · devices"]
+    L[Shipment sensor loggers<br/>temperature · humidity · GPS]
+    ZB[Zerobus Ingest<br/>gRPC record-by-record, no Kafka]
+    L --> ZB
+  end
+
   subgraph UC["Unity Catalog · governed lakehouse (bldemos.agentbricks_weatherwise)"]
-    T[Delta tables<br/>shipments · inventory · suppliers · supplier_sops]
+    T[Delta tables<br/>shipments · inventory · suppliers · supplier_sops<br/>shipment_sensor_readings · streaming]
     VS[Vector Search index<br/>supplier_sops_vs_index]
     F[UC functions<br/>get_shipments · get_backup_inventory<br/>get_supplier_details · temp_gap]
     M[Agent model<br/>weatherwise · registered]
@@ -65,6 +71,7 @@ flowchart LR
   U((Supply chain<br/>coordinator))
 
   SRC -- Lakeflow Job --> UC
+  ZB -- direct to Delta --> T
   F & VS --> A
   M -- serve --> SERVE
   A -.-> ML
