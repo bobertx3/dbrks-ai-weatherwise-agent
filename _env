@@ -1,39 +1,46 @@
-## To send emails, using Mailgun (3000 free emails per month)
-MAILGUN_API_URL="https://api.mailgun.net/v3/datakafe.com/messages"
-MAILGUN_API_KEY=""
-SENDER=""
-RECIPIENT=""
+# WeatherWise demo configuration. Copy to .env (gitignored) and fill in the blanks.
+# The bundle uploads .env to the workspace; the setup and agent_eval jobs read it.
 
-## To send SMS, using Twilio
-SMS_ACCOUNT_SID=""
-SMS_AUTH_TOKEN=""
+## Catalog and schema (Unity Catalog)
+TARGET_CATALOG=bldemos
+TARGET_SCHEMA=agentbricks_weatherwise
+
+## SQL warehouse and Genie space (app, dashboard, Genie, agent UC functions)
+WAREHOUSE_ID=<sql-warehouse-id>
+GENIE_ID=<genie-space-id>
+
+## Agent
+AGENT_NAME=weatherwise
+MLFLOW_EXPERIMENT=weatherwise_agent_traces
+VS_INDEX_BASE_TABLE=supplier_sops
+VS_INDEX=supplier_sops_vs_index
+RETRIEVER_TOOL_NAME=search_supplier_sops
+# Keep one container warm for demos (false). Set true to scale to zero when idle and save cost.
+# AGENT_SCALE_TO_ZERO=false
+
+## LLM via a Unity AI Gateway model service (created by agent_src/setup_ai_gateway.py).
+## LLM calls run as a dedicated service principal (scripts/setup_agent_llm_sp.sh), no PAT on the endpoint.
+AI_GATEWAY_MODEL=bldemos.agentbricks_weatherwise.weatherwise_llm
+LLM_DESTINATION_MODEL=system.ai.databricks-gpt-5-6-sol
+AGENT_LLM_SECRET_SCOPE=weatherwise-agent
+AI_GATEWAY_BASE_URL=https://<workspace-host>/ai-gateway/mlflow/v1
+
+## Local runs only (running the agent or notebooks from your laptop). Leave commented for deploys.
+# DATABRICKS_HOST=https://<workspace-host>
+# DATABRICKS_TOKEN=<personal-access-token>
+
+## Email via Mailgun (send_email tool)
+MAILGUN_API_URL=https://api.mailgun.net/v3/<your-domain>/messages
+MAILGUN_API_KEY=
+SENDER=
+# Default recipient when the user doesn't type an email address
+RECIPIENT=
+# EMAIL_FROM_NAME=WeatherWise Agent
+
+## SMS via Twilio (send_sms and send_connect_sms tools)
+SMS_ACCOUNT_SID=
+SMS_AUTH_TOKEN=
 # Only when SMS_ACCOUNT_SID is an API key (SK...): the AC... account SID
-SMS_ACCOUNT_ID=""
-
-## Catalog and Schema
-TARGET_CATALOG="bldemos"
-TARGET_SCHEMA="agentbricks_weatherwise"
-
-## Additional configs
-DATABRICKS_HOST="https://fevm-bobertx3-aws-fevm.cloud.databricks.com"
-DATABRICKS_TOKEN=""
-AI_GATEWAY_MODEL="bldemos.agentbricks_weatherwise.weatherwise_llm"
-LLM_DESTINATION_MODEL="system.ai.databricks-gpt-5-6-sol"
-AGENT_LLM_SECRET_SCOPE="weatherwise-agent"
-AI_GATEWAY_BASE_URL="https://fevm-bobertx3-aws-fevm.cloud.databricks.com/ai-gateway/mlflow/v1"
-# LLM_ENDPOINT_NAME is only used when AI_GATEWAY_MODEL is empty.
-# LLM_ENDPOINT_NAME="databricks-gpt-5-5"
-MLFLOW_EXPERIMENT="weather_agent_tests"
-VS_INDEX_BASE_TABLE="supplier_sops"
-VS_INDEX="supplier_sops_vs_index"
-RETRIEVER_TOOL_NAME="search_supplier_sops"
-AGENT_NAME="weatherwise"
-APP_NAME="weatherwise_chat_agent"
-
-
-# SQL Warehouse for Dashboard and Genie
-DATABRICKS_SQL_WAREHOUSE_ID=35670cdf44904d28
-
-# Genie Space for Ask Genie tab
-DATABRICKS_GENIE_SPACE_ID=01f18b8e23121aea9902dd6277b5de5b
-
+SMS_ACCOUNT_ID=
+# Profile link for the networking text (send_connect_sms)
+# LINKEDIN_URL=https://www.linkedin.com/in/<you>/
